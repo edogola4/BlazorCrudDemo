@@ -3,10 +3,19 @@ using BlazorCrudDemo.Data.Interfaces;
 using BlazorCrudDemo.Data.Repositories;
 using BlazorCrudDemo.Data.Contexts.Interceptors;
 using BlazorCrudDemo.Data.UnitOfWork;
+using BlazorCrudDemo.Web.Services;
+using BlazorCrudDemo.Web.Hubs;
+using BlazorCrudDemo.Web.BackgroundServices;
+using BlazorCrudDemo.Web.Mapping;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.SignalR;
 using Blazored.Toast;
 using Blazored.Modal;
+using AutoMapper;
+using BlazorCrudDemo.Shared.DTOs;
+using FluentValidation;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +55,35 @@ builder.Services.AddScoped<ICategoryRepository>(serviceProvider =>
 // Register Unit of Work
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+// Register AutoMapper
+var mapperConfig = new MapperConfiguration(cfg =>
+{
+    cfg.AddProfile<MappingProfile>();
+});
+var mapper = mapperConfig.CreateMapper();
+builder.Services.AddSingleton(mapper);
+
+// Register FluentValidation
+builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+
+// Register services
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IStateContainer, StateContainer>();
+builder.Services.AddScoped<IBusinessValidationService, BusinessValidationService>();
+
+// Register background services
+builder.Services.AddHostedService<MaintenanceBackgroundService>();
+builder.Services.AddHostedService<CacheCleanupBackgroundService>();
+builder.Services.AddHostedService<DataSyncBackgroundService>();
+
+// Register SignalR
+builder.Services.AddSignalR();
+
+// Add memory cache
+builder.Services.AddMemoryCache();
+
 // Add Blazored services
 builder.Services.AddBlazoredToast();
 builder.Services.AddBlazoredModal();
@@ -62,6 +100,9 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
+
+// Configure SignalR hub
+app.MapHub<NotificationHub>("/notificationHub");
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
