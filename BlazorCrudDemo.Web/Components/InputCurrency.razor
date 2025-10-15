@@ -1,0 +1,88 @@
+@using System.Globalization
+@using System.Diagnostics.CodeAnalysis
+@inherits InputBase<decimal>
+
+<div class="form-floating mb-3">
+    <input type="text"
+           class="form-control @(CssClass) @(HasError ? "is-invalid" : "")"
+           id="@Id"
+           placeholder="@Placeholder"
+           value="@FormattedValue"
+           @oninput="OnInputChanged"
+           @onblur="OnBlur"
+           @attributes="AdditionalAttributes" />
+    <label for="@Id">@Label</label>
+    @if (!string.IsNullOrEmpty(HelpText))
+    {
+        <div class="form-text">@HelpText</div>
+    }
+    <div class="invalid-feedback">
+        @ErrorMessage
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Id { get; set; } = Guid.NewGuid().ToString();
+    [Parameter] public string Label { get; set; } = "Price";
+    [Parameter] public string Placeholder { get; set; } = "0.00";
+    [Parameter] public string HelpText { get; set; } = "";
+    [Parameter] public CultureInfo Culture { get; set; } = CultureInfo.CurrentCulture;
+    [Parameter] public new EventCallback<decimal> ValueChanged { get; set; }
+
+    private string FormattedValue => CurrentValue.ToString("C", Culture);
+    private new string CssClass => EditContext?.FieldCssClass(FieldIdentifier) ?? "";
+    private bool HasError => !string.IsNullOrEmpty(ErrorMessage);
+    private string? ErrorMessage => EditContext?.GetValidationMessages(FieldIdentifier).FirstOrDefault();
+
+    private void OnInputChanged(ChangeEventArgs e)
+    {
+        var input = e.Value?.ToString() ?? "";
+        if (decimal.TryParse(input, NumberStyles.Currency, Culture, out var value))
+        {
+            CurrentValue = value;
+            _ = ValueChanged.InvokeAsync(value);
+        }
+        else if (string.IsNullOrEmpty(input))
+        {
+            CurrentValue = 0;
+            _ = ValueChanged.InvokeAsync(0);
+        }
+    }
+
+    private void OnBlur()
+    {
+        // Trigger validation on blur
+        EditContext?.NotifyFieldChanged(FieldIdentifier);
+    }
+
+    protected override bool TryParseValueFromString(string? value, [NotNullWhen(true)] out decimal result, [NotNullWhen(false)] out string? validationErrorMessage)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            result = 0;
+            validationErrorMessage = null;
+            return true;
+        }
+
+        if (decimal.TryParse(value, NumberStyles.Currency, Culture, out var parsed))
+        {
+            result = parsed;
+            validationErrorMessage = null;
+            return true;
+        }
+
+        result = 0;
+        validationErrorMessage = "Invalid currency format.";
+        return false;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+        
+        if (ValueChanged.HasDelegate && CurrentValue != 0)
+        {
+            await ValueChanged.InvokeAsync(CurrentValue);
+        }
+    }
+}
