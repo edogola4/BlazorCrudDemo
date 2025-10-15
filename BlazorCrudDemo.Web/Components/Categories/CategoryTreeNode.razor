@@ -1,0 +1,181 @@
+@using BlazorCrudDemo.Shared.DTOs
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="tree-node @(IsDragging ? "dragging" : "")"
+     draggable="@Draggable"
+     @ondragstart="HandleDragStart"
+     @ondragend="HandleDragEnd"
+     @oncontextmenu="HandleContextMenu"
+     @oncontextmenu:preventDefault="true">
+
+    <div class="node-content" @onclick="HandleClick">
+        <!-- Expand/Collapse Icon -->
+        @if (HasChildren)
+        {
+            <i class="fas fa-chevron-right expand-icon @(IsExpanded ? "expanded" : "")"
+               @onclick="ToggleExpand"
+               @onclick:stopPropagation="true"></i>
+        }
+        else
+        {
+            <div class="expand-spacer"></div>
+        }
+
+        <!-- Category Icon -->
+        <div class="node-icon">
+            <i class="@GetIconClass()"></i>
+        </div>
+
+        <!-- Category Info -->
+        <div class="node-info">
+            <div class="node-title @GetTitleClasses()">
+                @Category.Name
+                @if (Category.IsActive)
+                {
+                    <span class="badge badge-sm bg-success ms-2">Active</span>
+                }
+                else
+                {
+                    <span class="badge badge-sm bg-secondary ms-2">Inactive</span>
+                }
+            </div>
+            <div class="node-meta">
+                <small class="text-muted">
+                    @Category.ProductCount product@(Category.ProductCount == 1 ? "" : "s")
+                    • Order: #@Category.DisplayOrder
+                </small>
+            </div>
+        </div>
+
+        <!-- Action Icons -->
+        <div class="node-actions d-flex gap-1">
+            <button class="btn btn-sm btn-outline-primary"
+                    @onclick="Edit"
+                    @onclick:stopPropagation="true"
+                    title="Edit">
+                <i class="fas fa-edit fa-xs"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger"
+                    @onclick="Delete"
+                    @onclick:stopPropagation="true"
+                    title="Delete">
+                <i class="fas fa-trash fa-xs"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Children -->
+    @if (IsExpanded && HasChildren)
+    {
+        <div class="node-children" style="margin-left: 2rem;">
+            @foreach (var child in GetChildren())
+            {
+                <CategoryTreeNode Category="child"
+                                 AllCategories="AllCategories"
+                                 Level="Level + 1"
+                                 ExpandedNodes="ExpandedNodes"
+                                 OnEdit="OnEdit"
+                                 OnDelete="OnDelete"
+                                 OnToggleExpand="OnToggleExpand"
+                                 OnDragStart="OnDragStart"
+                                 OnDragEnd="OnDragEnd"
+                                 OnReorder="OnReorder" />
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public CategoryDto Category { get; set; } = default!;
+    [Parameter] public List<CategoryDto> AllCategories { get; set; } = new();
+    [Parameter] public int Level { get; set; }
+    [Parameter] public HashSet<int> ExpandedNodes { get; set; } = new();
+    [Parameter] public EventCallback<CategoryDto> OnEdit { get; set; }
+    [Parameter] public EventCallback<CategoryDto> OnDelete { get; set; }
+    [Parameter] public EventCallback<CategoryDto> OnToggleExpand { get; set; }
+    [Parameter] public EventCallback<CategoryDto> OnDragStart { get; set; }
+    [Parameter] public EventCallback OnDragEnd { get; set; }
+    [Parameter] public EventCallback<Dictionary<int, int>> OnReorder { get; set; }
+
+    private bool IsDragging { get; set; }
+    private bool Draggable { get; set; } = true;
+
+    private bool IsExpanded => ExpandedNodes.Contains(Category.Id);
+    private bool HasChildren => GetChildren().Any();
+
+    private string GetIconClass()
+    {
+        if (!string.IsNullOrEmpty(Category.Icon))
+        {
+            if (Category.Icon.StartsWith("fas ") || Category.Icon.StartsWith("far ") || Category.Icon.StartsWith("fab "))
+                return Category.Icon;
+
+            if (!Category.Icon.Contains(" "))
+                return $"fas {Category.Icon}";
+        }
+
+        return HasChildren ? "fas fa-folder" : "fas fa-file";
+    }
+
+    private string GetTitleClasses()
+    {
+        var classes = new List<string>();
+
+        if (!Category.IsActive)
+            classes.Add("text-muted");
+
+        return string.Join(" ", classes);
+    }
+
+    private IEnumerable<CategoryDto> GetChildren()
+    {
+        // In a real implementation, you would use ParentId property
+        // For now, we'll use a simple heuristic based on display order
+        return AllCategories
+            .Where(c => c.Id != Category.Id &&
+                       Math.Abs(c.DisplayOrder - Category.DisplayOrder) < 10 &&
+                       c.DisplayOrder > Category.DisplayOrder)
+            .OrderBy(c => c.DisplayOrder)
+            .Take(5); // Limit children for performance
+    }
+
+    private void HandleClick()
+    {
+        if (Category.HasProducts)
+        {
+            OnToggleExpand.InvokeAsync(Category);
+        }
+    }
+
+    private void ToggleExpand()
+    {
+        OnToggleExpand.InvokeAsync(Category);
+    }
+
+    private void Edit()
+    {
+        OnEdit.InvokeAsync(Category);
+    }
+
+    private void Delete()
+    {
+        OnDelete.InvokeAsync(Category);
+    }
+
+    private void HandleDragStart(DragEventArgs e)
+    {
+        IsDragging = true;
+        OnDragStart.InvokeAsync(Category);
+    }
+
+    private void HandleDragEnd(DragEventArgs e)
+    {
+        IsDragging = false;
+        OnDragEnd.InvokeAsync();
+    }
+
+    private void HandleContextMenu(MouseEventArgs e)
+    {
+        // Context menu would be handled by parent component
+    }
+}

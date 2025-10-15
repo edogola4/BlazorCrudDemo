@@ -1,0 +1,235 @@
+@using BlazorCrudDemo.Shared.DTOs
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+
+<div class="category-tree @(IsDragOver ? "drag-over" : "")"
+     @ondragenter="HandleDragEnter"
+     @ondragleave="HandleDragLeave"
+     @ondragover="HandleDragOver"
+     @ondrop="HandleDrop">
+
+    @if (!Categories.Any())
+    {
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-sitemap fa-3x mb-3"></i>
+            <p>No categories to display</p>
+        </div>
+    }
+    else
+    {
+        <div class="tree-container">
+            @foreach (var category in RootCategories)
+            {
+                <CategoryTreeNode Category="category"
+                                 AllCategories="Categories"
+                                 Level="0"
+                                 ExpandedNodes="ExpandedNodes"
+                                 OnEdit="OnEdit"
+                                 OnDelete="OnDelete"
+                                 OnToggleExpand="ToggleNodeExpansion"
+                                 OnDragStart="HandleNodeDragStart"
+                                 OnDragEnd="HandleNodeDragEnd"
+                                 OnReorder="OnReorder" />
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<CategoryDto> Categories { get; set; } = new();
+    [Parameter] public EventCallback<CategoryDto> OnEdit { get; set; }
+    [Parameter] public EventCallback<CategoryDto> OnDelete { get; set; }
+    [Parameter] public EventCallback<Dictionary<int, int>> OnReorder { get; set; }
+
+    private HashSet<int> ExpandedNodes { get; set; } = new();
+    private bool IsDragOver { get; set; }
+    private CategoryDto? DraggedCategory { get; set; }
+    private CategoryDto? DragTargetCategory { get; set; }
+
+    // Context menu
+    private bool _showContextMenu { get; set; }
+    private int ContextMenuX { get; set; }
+    private int ContextMenuY { get; set; }
+    private CategoryDto? ContextMenuCategory { get; set; }
+
+    private IEnumerable<CategoryDto> RootCategories => Categories.Where(c => !HasParent(c));
+
+    private bool HasParent(CategoryDto category)
+    {
+        return Categories.Any(c => c.Id != category.Id); // Simplified - in real implementation you'd have ParentId
+    }
+
+    private void ToggleNodeExpansion(CategoryDto category)
+    {
+        if (ExpandedNodes.Contains(category.Id))
+            ExpandedNodes.Remove(category.Id);
+        else
+            ExpandedNodes.Add(category.Id);
+    }
+
+    private void HandleNodeDragStart(CategoryDto category)
+    {
+        DraggedCategory = category;
+    }
+
+    private void HandleNodeDragEnd()
+    {
+        DraggedCategory = null;
+        DragTargetCategory = null;
+        IsDragOver = false;
+    }
+
+    private void HandleDragEnter(DragEventArgs e)
+    {
+        if (DraggedCategory != null)
+        {
+            IsDragOver = true;
+        }
+    }
+
+    private void HandleDragLeave(DragEventArgs e)
+    {
+        IsDragOver = false;
+    }
+
+    private void HandleDragOver(DragEventArgs e)
+    {
+        // PreventDefault not needed in Blazor drag events
+    }
+
+    private void HandleDrop(DragEventArgs e)
+    {
+        IsDragOver = false;
+
+        if (DraggedCategory == null) return;
+
+        // In a real implementation, you would determine the drop target
+        // For now, we'll just update the display order
+        var newOrders = new Dictionary<int, int>();
+
+        // Simple reordering logic - move dragged category to end
+        var maxOrder = Categories.Max(c => c.DisplayOrder);
+        newOrders[DraggedCategory.Id] = maxOrder + 1;
+
+        OnReorder.InvokeAsync(newOrders);
+    }
+
+    private void EditCategory(CategoryDto category)
+    {
+        HideContextMenu();
+        OnEdit.InvokeAsync(category);
+    }
+
+    private void DeleteCategory(CategoryDto category)
+    {
+        HideContextMenu();
+        OnDelete.InvokeAsync(category);
+    }
+
+    private void AddSubcategory(CategoryDto parentCategory)
+    {
+        HideContextMenu();
+        // In a real implementation, you would show a form to create a subcategory
+        // For now, we'll just call the edit handler
+        OnEdit.InvokeAsync(new CategoryDto()); // This would need to be enhanced
+    }
+
+    private void ShowContextMenu(MouseEventArgs e, CategoryDto category)
+    {
+        ContextMenuCategory = category;
+        ContextMenuX = (int)e.ClientX;
+        ContextMenuY = (int)e.ClientY;
+        _showContextMenu = true;
+    }
+
+    private void HideContextMenu()
+    {
+        _showContextMenu = false;
+        ContextMenuCategory = null;
+    }
+}
+
+<style>
+    .category-tree {
+        min-height: 400px;
+        transition: background-color 0.2s ease;
+    }
+
+    .category-tree.drag-over {
+        background-color: rgba(0, 123, 255, 0.1);
+    }
+
+    .tree-container {
+        padding: 1rem;
+    }
+
+    .tree-node {
+        margin: 0.25rem 0;
+        border-radius: 0.375rem;
+        transition: all 0.2s ease;
+    }
+
+    .tree-node:hover {
+        background-color: rgba(0, 123, 255, 0.05);
+    }
+
+    .tree-node.dragging {
+        opacity: 0.5;
+        transform: rotate(2deg);
+    }
+
+    .node-content {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        cursor: pointer;
+    }
+
+    .node-icon {
+        margin-right: 0.75rem;
+        color: #6c757d;
+    }
+
+    .node-info {
+        flex-grow: 1;
+    }
+
+    .node-title {
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+    }
+
+    .node-meta {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+
+    .expand-icon {
+        margin-right: 0.5rem;
+        transition: transform 0.2s ease;
+    }
+
+    .expand-icon.expanded {
+        transform: rotate(90deg);
+    }
+
+    .context-menu {
+        display: none;
+    }
+
+    .context-menu.show {
+        display: block;
+    }
+
+    .dropdown-item {
+        cursor: pointer;
+    }
+
+    .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .dropdown-item.text-danger:hover {
+        background-color: #f8d7da;
+    }
+</style>

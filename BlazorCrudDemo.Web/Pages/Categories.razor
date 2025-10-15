@@ -1,0 +1,508 @@
+@page "/categories"
+@using System
+@using Microsoft.AspNetCore.Components
+@using BlazorCrudDemo.Shared.DTOs
+@using BlazorCrudDemo.Web.Services
+@using BlazorCrudDemo.Web.Components.Categories
+@using Microsoft.JSInterop
+@using System.Linq
+@inject ICategoryService CategoryService
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<PageTitle>Categories - Blazor CRUD Demo</PageTitle>
+
+<div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0 text-gray-800">Categories</h1>
+                    <p class="text-muted">Organize your products into categories</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary" @onclick="ToggleTreeView">
+                        <i class="fas fa-@(ShowTreeView ? "th-large" : "sitemap") me-2"></i>
+                        @(ShowTreeView ? "Grid View" : "Tree View")
+                    </button>
+                    <button class="btn btn-primary" @onclick="ShowCreateModal">
+                        <i class="fas fa-plus me-2"></i>Add Category
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (ShowTreeView)
+    {
+        <!-- Tree View -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-sitemap me-2"></i>Category Hierarchy
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <CategoryTree Categories="FilteredCategories"
+                                     OnEdit="EditCategory"
+                                     OnDelete="DeleteCategory"
+                                     OnReorder="HandleReorder" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Search and Filter Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <!-- Search Bar -->
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                    <input type="text"
+                                           class="form-control"
+                                           placeholder="Search categories..."
+                                           @bind="SearchTerm"
+                                           @bind:event="oninput" />
+                                    @if (!string.IsNullOrEmpty(SearchTerm))
+                                    {
+                                        <button class="btn btn-outline-secondary" type="button" @onclick="ClearSearch">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Filter Options -->
+                            <div class="col-md-3">
+                                <select class="form-select" @bind="FilterType" @bind:event="onchange">
+                                    <option value="all">All Categories</option>
+                                    <option value="with-products">With Products</option>
+                                    <option value="empty">Empty Categories</option>
+                                    <option value="active">Active Only</option>
+                                    <option value="inactive">Inactive Only</option>
+                                </select>
+                            </div>
+
+                            <!-- Sort Options -->
+                            <div class="col-md-3">
+                                <select class="form-select" @bind="SortBy" @bind:event="onchange">
+                                    <option value="name-asc">Name (A-Z)</option>
+                                    <option value="name-desc">Name (Z-A)</option>
+                                    <option value="order-asc">Display Order</option>
+                                    <option value="order-desc">Display Order (Reverse)</option>
+                                    <option value="products-desc">Most Products</option>
+                                    <option value="products-asc">Fewest Products</option>
+                                    <option value="created-desc">Newest First</option>
+                                    <option value="created-asc">Oldest First</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        @if (CategoryStats != default)
+        {
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h2 class="mb-1">@CategoryStats.TotalCategories</h2>
+                            <small>Total Categories</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h2 class="mb-1">@CategoryStats.ActiveCategories</h2>
+                            <small>Active Categories</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h2 class="mb-1">@CategoryStats.CategoriesWithProducts</h2>
+                            <small>With Products</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h2 class="mb-1">@CategoryStats.EmptyCategories</h2>
+                            <small>Empty Categories</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Categories Grid -->
+        <div class="row">
+            @if (IsLoading)
+            {
+                <div class="col-12 text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading categories...</p>
+                </div>
+            }
+            else if (!FilteredCategories.Any())
+            {
+                <div class="col-12 text-center py-5">
+                    <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                    <h4>No categories found</h4>
+                    <p class="text-muted">
+                        @if (!string.IsNullOrEmpty(SearchTerm))
+                        {
+                            @($"No categories match your search for \"{SearchTerm}\"")
+                        }
+                        else
+                        {
+                            @:Get started by creating your first category.
+                        }
+                    </p>
+                    @if (string.IsNullOrEmpty(SearchTerm))
+                    {
+                        <button class="btn btn-primary mt-3" @onclick="ShowCreateModal">
+                            <i class="fas fa-plus me-2"></i>Create First Category
+                        </button>
+                    }
+                </div>
+            }
+            else
+            {
+                @foreach (var category in FilteredCategories)
+                {
+                    <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-4">
+                        <CategoryCard Category="category"
+                                     OnEdit="EditCategory"
+                                     OnDelete="DeleteCategory"
+                                     OnToggleExpand="ToggleCategoryExpansion" />
+                    </div>
+                }
+            }
+        </div>
+    }
+
+    <!-- Expanded Category Details -->
+    @if (ExpandedCategory != null)
+    {
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-folder me-2"></i>@ExpandedCategory.Name
+                        </h5>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="CollapseCategory">
+                            <i class="fas fa-times me-1"></i>Collapse
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        @if (ExpandedCategoryProducts == null)
+                        {
+                            <div class="text-center py-3">
+                                <div class="spinner-border spinner-border-sm" role="status"></div>
+                                <small class="ms-2">Loading products...</small>
+                            </div>
+                        }
+                        else if (!ExpandedCategoryProducts.Any())
+                        {
+                            <div class="text-center py-3 text-muted">
+                                <i class="fas fa-box-open fa-2x mb-2"></i>
+                                <p>No products in this category</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="row">
+                                @foreach (var product in ExpandedCategoryProducts.Take(6))
+                                {
+                                    <div class="col-md-4 col-sm-6 mb-3">
+                                        <div class="card h-100">
+                                            @if (!string.IsNullOrEmpty(product.ImageUrl))
+                                            {
+                                                <img src="@product.ImageUrl" class="card-img-top" alt="@product.Name" style="height: 120px; object-fit: cover;" />
+                                            }
+                                            <div class="card-body">
+                                                <h6 class="card-title">@product.Name</h6>
+                                                <p class="card-text small text-muted">@product.Description?.Substring(0, Math.Min(product.Description?.Length ?? 0, 80))</p>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span class="fw-bold text-primary">@product.Price.ToString("C")</span>
+                                                    <span class="badge bg-@(product.IsActive ? "success" : "secondary")">
+                                                        @(product.IsActive ? "Active" : "Inactive")
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                @if (ExpandedCategoryProducts.Count() > 6)
+                                {
+                                    <div class="col-12 text-center mt-3">
+                                        <button class="btn btn-outline-primary" @onclick="ViewAllProducts">
+                                            View All @ExpandedCategoryProducts.Count() Products
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Category Form Modal -->
+<CategoryForm @ref="CategoryFormRef"
+              Show="ShowFormModal"
+              Category="EditingCategory"
+              Categories="CategoryList"
+              OnSave="HandleCategorySave"
+              OnCancel="HideFormModal" />
+
+@code {
+    [Inject] private IProductService ProductService { get; set; } = default!;
+
+    private List<CategoryDto> CategoryList { get; set; } = new();
+    private List<CategoryDto> FilteredCategories { get; set; } = new();
+    private CategoryDto? ExpandedCategory { get; set; }
+    private IEnumerable<ProductDto>? ExpandedCategoryProducts { get; set; }
+
+    private string SearchTerm { get; set; } = "";
+    private string FilterType { get; set; } = "all";
+    private string SortBy { get; set; } = "order-asc";
+    private bool ShowTreeView { get; set; }
+    private bool IsLoading { get; set; } = true;
+
+    private CategoryForm? CategoryFormRef;
+    private bool ShowFormModal { get; set; }
+    private CategoryDto? EditingCategory;
+
+    private (int TotalCategories, int ActiveCategories, int CategoriesWithProducts, int EmptyCategories) CategoryStats;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+        await LoadCategoryStats();
+    }
+
+    private async Task LoadCategories()
+    {
+        IsLoading = true;
+        try
+        {
+            CategoryList = (await CategoryService.GetCategoriesWithProductCountsAsync()).ToList();
+            await ApplyFiltersAndSorting();
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorMessage($"Failed to load categories: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task LoadCategoryStats()
+    {
+        try
+        {
+            CategoryStats = await CategoryService.GetCategoryStatisticsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load category statistics: {ex.Message}");
+        }
+    }
+
+    private async Task ApplyFiltersAndSorting()
+    {
+        var filtered = CategoryList.AsEnumerable();
+
+        // Apply search filter
+        if (!string.IsNullOrEmpty(SearchTerm))
+        {
+            filtered = filtered.Where(c =>
+                c.Name?.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) == true ||
+                c.Description?.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) == true);
+        }
+
+        // Apply type filter
+        filtered = FilterType switch
+        {
+            "with-products" => filtered.Where(c => c.HasProducts),
+            "empty" => filtered.Where(c => !c.HasProducts),
+            "active" => filtered.Where(c => c.IsActive),
+            "inactive" => filtered.Where(c => !c.IsActive),
+            _ => filtered
+        };
+
+        // Apply sorting
+        filtered = SortBy switch
+        {
+            "name-asc" => filtered.OrderBy(c => c.Name),
+            "name-desc" => filtered.OrderByDescending(c => c.Name),
+            "order-asc" => filtered.OrderBy(c => c.DisplayOrder).ThenBy(c => c.Name),
+            "order-desc" => filtered.OrderByDescending(c => c.DisplayOrder).ThenBy(c => c.Name),
+            "products-desc" => filtered.OrderByDescending(c => c.ProductCount).ThenBy(c => c.Name),
+            "products-asc" => filtered.OrderBy(c => c.ProductCount).ThenBy(c => c.Name),
+            "created-desc" => filtered.OrderByDescending(c => c.CreatedDate),
+            "created-asc" => filtered.OrderBy(c => c.CreatedDate),
+            _ => filtered.OrderBy(c => c.DisplayOrder).ThenBy(c => c.Name)
+        };
+
+    }
+
+    private async void ClearSearch()
+    {
+        SearchTerm = "";
+        await ApplyFiltersAndSorting();
+    }
+    private async Task ShowCreateModal()
+    {
+        EditingCategory = new CategoryDto
+        {
+            DisplayOrder = CategoryList.Any() ? CategoryList.Max(c => c.DisplayOrder) + 1 : 1,
+            IsActive = true
+        };
+        ShowFormModal = true;
+        await CategoryFormRef?.InitializeForCreate();
+    }
+
+    private async Task EditCategory(CategoryDto category)
+    {
+        EditingCategory = category;
+        ShowFormModal = true;
+        await CategoryFormRef?.InitializeForEdit(category);
+    }
+
+    private async Task DeleteCategory(CategoryDto category)
+    {
+        if (category.HasProducts)
+        {
+            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm",
+                $"Are you sure you want to delete '{category.Name}'? This category contains {category.ProductCount} product{(category.ProductCount == 1 ? "" : "s")}. The products will need to be moved to another category or deleted.");
+
+            if (!confirmed) return;
+        }
+        else
+        {
+            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm",
+                $"Are you sure you want to delete '{category.Name}'?");
+
+            if (!confirmed) return;
+        }
+
+        try
+        {
+            await CategoryService.DeleteCategoryAsync(category.Id);
+            await LoadCategories();
+            await LoadCategoryStats();
+            await ShowSuccessMessage($"Category '{category.Name}' deleted successfully");
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorMessage($"Failed to delete category: {ex.Message}");
+        }
+    }
+
+    private async Task HandleCategorySave(CategoryDto category)
+    {
+        ShowFormModal = false;
+        EditingCategory = null;
+        await LoadCategories();
+        await LoadCategoryStats();
+    }
+
+    private void HideFormModal()
+    {
+        ShowFormModal = false;
+        EditingCategory = null;
+    }
+
+    private async Task ToggleCategoryExpansion(CategoryDto category)
+    {
+        if (ExpandedCategory?.Id == category.Id)
+        {
+            CollapseCategory();
+            return;
+        }
+
+        ExpandedCategory = category;
+        await LoadCategoryProducts(category.Id);
+    }
+
+    private void CollapseCategory()
+    {
+        ExpandedCategory = null;
+        ExpandedCategoryProducts = null;
+    }
+
+    private async Task LoadCategoryProducts(int categoryId)
+    {
+        try
+        {
+            ExpandedCategoryProducts = (await ProductService.GetProductsAsync(categoryId: categoryId, pageSize: 100)).Items;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load products for category: {ex.Message}");
+            ExpandedCategoryProducts = Enumerable.Empty<ProductDto>();
+        }
+    }
+
+    private void ViewAllProducts()
+    {
+        if (ExpandedCategory != null)
+        {
+            Navigation.NavigateTo($"/products?category={ExpandedCategory.Id}");
+        }
+    }
+
+    private void ToggleTreeView()
+    {
+        ShowTreeView = !ShowTreeView;
+    }
+
+    private async Task HandleReorder(Dictionary<int, int> newOrders)
+    {
+        try
+        {
+            await CategoryService.UpdateDisplayOrdersAsync(newOrders);
+            await LoadCategories();
+            await ShowSuccessMessage("Category order updated successfully");
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorMessage($"Failed to update category order: {ex.Message}");
+        }
+    }
+
+    private async Task ShowSuccessMessage(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showToast", message, "success");
+    }
+
+    private async Task ShowErrorMessage(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("showToast", message, "error");
+    }
+}

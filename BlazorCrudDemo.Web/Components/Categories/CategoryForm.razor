@@ -1,0 +1,327 @@
+@using BlazorCrudDemo.Shared.DTOs
+@using BlazorCrudDemo.Web.Services
+@using Microsoft.AspNetCore.Components.Forms
+@using System.ComponentModel.DataAnnotations
+@using System.Linq
+@inject ICategoryService CategoryService
+
+@if (Show)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-@(IsEdit ? "edit" : "plus") me-2"></i>
+                        @(IsEdit ? $"Edit '{Category?.Name}'" : "Create New Category")
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="Cancel"></button>
+                </div>
+
+                <EditForm Model="FormModel" OnValidSubmit="HandleSubmit" class="needs-validation">
+                    <div class="modal-body">
+                        <!-- Basic Information Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="section-title">
+                                    <i class="fas fa-info-circle me-2"></i>Basic Information
+                                </h6>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <div class="form-floating">
+                                    <InputText id="name" @bind-Value="FormModel.Name" class="form-control" placeholder="Category Name" />
+                                    <label for="name">Category Name *</label>
+                                    <ValidationMessage For="@(() => FormModel.Name)" />
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch mt-4">
+                                    <input class="form-check-input" type="checkbox" id="isActive" @bind="FormModel.IsActive">
+                                    <label class="form-check-label" for="isActive">
+                                        Active
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    <textarea id="description" @bind="FormModel.Description" class="form-control" placeholder="Category Description" style="height: 80px;"></textarea>
+                                    <label for="description">Description</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Icon and Display Order Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="section-title">
+                                    <i class="fas fa-palette me-2"></i>Appearance & Order
+                                </h6>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <!-- Icon Selection -->
+                                <label class="form-label">Category Icon</label>
+                                <div class="icon-selector">
+                                    <div class="icon-grid">
+                                        @foreach (var icon in AvailableIcons)
+                                        {
+                                            <button type="button"
+                                                    class="icon-option @(FormModel.Icon == icon ? "selected" : "")"
+                                                    @onclick="() => SelectIcon(icon)"
+                                                    title="@icon">
+                                                <i class="@icon"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-muted">Click to select an icon for your category</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <InputNumber id="displayOrder" @bind-Value="FormModel.DisplayOrder" class="form-control" placeholder="Display Order" />
+                                    <label for="displayOrder">Display Order</label>
+                                    <div class="form-text">
+                                        Lower numbers appear first. Current range: @(CategoryList.Any() ? $"{CategoryList.Min(c => c.DisplayOrder)}-{CategoryList.Max(c => c.DisplayOrder)}" : "1+")
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Preview Section -->
+                        @if (!string.IsNullOrEmpty(FormModel.Name))
+                        {
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <h6 class="section-title">
+                                        <i class="fas fa-eye me-2"></i>Preview
+                                    </h6>
+                                    <div class="category-preview p-3 border rounded">
+                                        <div class="d-flex align-items-center">
+                                            <div class="category-icon me-3">
+                                                <i class="@GetPreviewIcon() fa-2x"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="@(FormModel.IsActive ? "text-dark" : "text-muted")">
+                                                    @FormModel.Name
+                                                    @if (FormModel.IsActive)
+                                                    {
+                                                        <span class="badge bg-success ms-2">Active</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary ms-2">Inactive</span>
+                                                    }
+                                                </h6>
+                                                @if (!string.IsNullOrEmpty(FormModel.Description))
+                                                {
+                                                    <p class="small text-muted mb-0">@FormModel.Description.Substring(0, Math.Min(FormModel.Description.Length, 100))</p>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="Cancel">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary" disabled="@IsSubmitting">
+                            @if (IsSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            <i class="fas fa-@(IsEdit ? "save" : "plus") me-2"></i>
+                            @(IsEdit ? "Update Category" : "Create Category")
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public CategoryDto? Category { get; set; }
+    [Parameter] public List<CategoryDto> CategoryList { get; set; } = new();
+    [Parameter] public EventCallback<CategoryDto> OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private CategoryFormModel FormModel { get; set; } = new();
+    private bool IsEdit => Category != null;
+    private bool IsSubmitting { get; set; }
+
+    // Available icons for selection
+    private readonly string[] AvailableIcons = new[]
+    {
+        "fas fa-folder", "fas fa-box", "fas fa-cube", "fas fa-archive", "fas fa-database",
+        "fas fa-hdd", "fas fa-server", "fas fa-laptop", "fas fa-mobile-alt", "fas fa-tablet-alt",
+        "fas fa-tv", "fas fa-camera", "fas fa-print", "fas fa-keyboard", "fas fa-mouse",
+        "fas fa-headphones", "fas fa-gamepad", "fas fa-watch", "fas fa-gem", "fas fa-star",
+        "fas fa-heart", "fas fa-thumbs-up", "fas fa-smile", "fas fa-sun", "fas fa-moon",
+        "fas fa-cloud", "fas fa-bolt", "fas fa-fire", "fas fa-snowflake", "fas fa-leaf",
+        "fas fa-tree", "fas fa-flower", "fas fa-seedling", "fas fa-crown", "fas fa-shield-alt",
+        "fas fa-home", "fas fa-building", "fas fa-industry", "fas fa-store", "fas fa-shopping-cart",
+        "fas fa-credit-card", "fas fa-money-bill", "fas fa-wallet", "fas fa-coins", "fas fa-piggy-bank",
+        "fas fa-car", "fas fa-bus", "fas fa-truck", "fas fa-plane", "fas fa-ship",
+        "fas fa-bicycle", "fas fa-motorcycle", "fas fa-taxi", "fas fa-rocket", "fas fa-space-shuttle"
+    };
+
+    protected override void OnParametersSet()
+    {
+        if (Category != null && Show)
+        {
+            FormModel = new CategoryFormModel
+            {
+                Name = Category.Name ?? "",
+                Description = Category.Description,
+                Icon = Category.Icon,
+                DisplayOrder = Category.DisplayOrder,
+                IsActive = Category.IsActive
+            };
+        }
+    }
+
+    public async Task InitializeForCreate()
+    {
+        FormModel = new CategoryFormModel
+        {
+            DisplayOrder = CategoryList.Any() ? CategoryList.Max(c => c.DisplayOrder) + 1 : 1,
+            IsActive = true,
+            Icon = "fas fa-folder" // Default icon
+        };
+        StateHasChanged();
+    }
+
+    public async Task InitializeForEdit(CategoryDto category)
+    {
+        Category = category;
+        FormModel = new CategoryFormModel
+        {
+            Name = category.Name ?? "",
+            Description = category.Description,
+            Icon = category.Icon,
+            DisplayOrder = category.DisplayOrder,
+            IsActive = category.IsActive
+        };
+        StateHasChanged();
+    }
+
+    private void SelectIcon(string icon)
+    {
+        FormModel.Icon = icon;
+    }
+
+    private string GetPreviewIcon()
+    {
+        if (!string.IsNullOrEmpty(FormModel.Icon))
+            return FormModel.Icon;
+
+        return "fas fa-folder";
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (IsSubmitting) return;
+
+        IsSubmitting = true;
+
+        try
+        {
+            // Validate name uniqueness
+            if (await CategoryService.CategoryNameExistsAsync(FormModel.Name, IsEdit ? Category?.Id : null))
+            {
+                await ShowError("A category with this name already exists.");
+                return;
+            }
+
+            CategoryDto result;
+            BlazorCrudDemo.Web.Services.UpdateCategoryDto updateDto = null;
+            BlazorCrudDemo.Web.Services.CreateCategoryDto createDto = null;
+
+            if (IsEdit && Category != null)
+            {
+                // Update existing category
+                updateDto = new BlazorCrudDemo.Web.Services.UpdateCategoryDto
+                {
+                    Id = Category.Id,
+                    Name = FormModel.Name,
+                    Description = FormModel.Description,
+                    Icon = FormModel.Icon,
+                    DisplayOrder = FormModel.DisplayOrder,
+                    IsActive = FormModel.IsActive
+                };
+
+                result = await CategoryService.UpdateCategoryAsync(updateDto);
+            }
+            else
+            {
+                // Create new category
+                createDto = new BlazorCrudDemo.Web.Services.CreateCategoryDto
+                {
+                    Name = FormModel.Name,
+                    Description = FormModel.Description,
+                    Icon = FormModel.Icon,
+                    DisplayOrder = FormModel.DisplayOrder,
+                    IsActive = FormModel.IsActive
+                };
+
+                result = await CategoryService.CreateCategoryAsync(createDto);
+            }
+
+            await OnSave.InvokeAsync(result);
+        }
+        catch (Exception ex)
+        {
+            await ShowError($"Failed to {(IsEdit ? "update" : "create")} category: {ex.Message}");
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        OnCancel.InvokeAsync();
+    }
+
+    private async Task ShowError(string message)
+    {
+        // You could integrate with a toast service here
+        Console.WriteLine($"Error: {message}");
+        await Task.Delay(100); // Brief delay for user feedback
+    }
+
+    private class CategoryFormModel
+    {
+        [Required(ErrorMessage = "Category name is required")]
+        [StringLength(100, ErrorMessage = "Category name cannot exceed 100 characters")]
+        public string Name { get; set; } = "";
+
+        [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
+        public string? Description { get; set; }
+
+        public string? Icon { get; set; }
+
+        [Required(ErrorMessage = "Display order is required")]
+        [Range(0, int.MaxValue, ErrorMessage = "Display order must be a non-negative number")]
+        public int DisplayOrder { get; set; }
+
+        public bool IsActive { get; set; } = true;
+    }
+}
