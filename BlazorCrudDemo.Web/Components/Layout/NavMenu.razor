@@ -1,36 +1,648 @@
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">BlazorCrudDemo.Web</a>
-    </div>
-</div>
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.JSInterop
+@implements IDisposable
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
-
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+<div class="nav-menu @(IsMobile ? "mobile-nav" : "desktop-nav") @(IsCollapsed ? "collapsed" : "")">
+    <!-- Navigation Items -->
+    <nav class="nav-items">
+        <!-- Home -->
+        <div class="nav-item @(IsActive("/") ? "active" : "")" @onclick="() => NavigateToHome()">
+            <NavLink href="/" class="nav-link" Match="NavLinkMatch.All">
+                <div class="nav-icon-wrapper">
+                    <i class="bi bi-house-door-fill nav-icon"></i>
+                    @if (!IsCollapsed)
+                    {
+                        <span class="nav-text">Home</span>
+                    }
+                    else
+                    {
+                        <span class="nav-tooltip">Home</span>
+                    }
+                </div>
+                @if (IsActive("/"))
+                {
+                    <div class="nav-indicator"></div>
+                }
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+        <!-- Counter -->
+        <div class="nav-item @(IsActive("/counter") ? "active" : "")" @onclick="() => NavigateToCounter()">
+            <NavLink href="counter" class="nav-link">
+                <div class="nav-icon-wrapper">
+                    <i class="bi bi-plus-square-fill nav-icon"></i>
+                    @if (!IsCollapsed)
+                    {
+                        <span class="nav-text">Counter</span>
+                    }
+                    else
+                    {
+                        <span class="nav-tooltip">Counter</span>
+                    }
+                </div>
+                @if (IsActive("/counter"))
+                {
+                    <div class="nav-indicator"></div>
+                }
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="products">
-                <span class="bi bi-box-seam-nav-menu" aria-hidden="true"></span> Products
+        <!-- Products -->
+        <div class="nav-item @(IsActive("/products") ? "active" : "")" @onclick="() => NavigateToProducts()">
+            <NavLink href="products" class="nav-link">
+                <div class="nav-icon-wrapper">
+                    <i class="bi bi-box-seam nav-icon"></i>
+                    @if (!IsCollapsed)
+                    {
+                        <span class="nav-text">Products</span>
+                    }
+                    else
+                    {
+                        <span class="nav-tooltip">Products</span>
+                    }
+                </div>
+                @if (IsActive("/products"))
+                {
+                    <div class="nav-indicator"></div>
+                }
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="categories">
-                <span class="bi bi-folder-nav-menu" aria-hidden="true"></span> Categories
+        <!-- Categories -->
+        <div class="nav-item @(IsActive("/categories") ? "active" : "")" @onclick="() => NavigateToCategories()">
+            <NavLink href="categories" class="nav-link">
+                <div class="nav-icon-wrapper">
+                    <i class="bi bi-folder nav-icon"></i>
+                    @if (!IsCollapsed)
+                    {
+                        <span class="nav-text">Categories</span>
+                    }
+                    else
+                    {
+                        <span class="nav-tooltip">Categories</span>
+                    }
+                </div>
+                @if (IsActive("/categories"))
+                {
+                    <div class="nav-indicator"></div>
+                }
             </NavLink>
         </div>
     </nav>
+
+    <!-- Recently Viewed Section -->
+    @if (!IsCollapsed && RecentlyViewed.Any())
+    {
+        <div class="recently-viewed">
+            <div class="recently-viewed-header">
+                <i class="bi bi-clock-history me-2"></i>
+                <span>Recently Viewed</span>
+            </div>
+            <div class="recently-viewed-items">
+                @foreach (var item in RecentlyViewed.Take(3))
+                {
+                    <div class="recently-viewed-item" @onclick="() => NavigateToPage(item.Url)">
+                        <div class="recent-icon">
+                            <i class="bi @item.Icon"></i>
+                        </div>
+                        <div class="recent-info">
+                            <div class="recent-title">@item.Title</div>
+                            <div class="recent-time">@item.TimeAgo</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
 </div>
 
+@code {
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private class RecentlyViewedItem
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Icon { get; set; } = string.Empty;
+        public string Url { get; set; } = string.Empty;
+        public string TimeAgo { get; set; } = string.Empty;
+        public DateTime ViewedAt { get; set; } = DateTime.Now;
+    }
+
+    [Parameter] public bool IsCollapsed { get; set; }
+    [Parameter] public bool IsMobile { get; set; }
+    private List<RecentlyViewedItem> RecentlyViewed { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        // Track navigation for recently viewed
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        // Update recently viewed items
+        var path = new Uri(e.Location).AbsolutePath;
+        AddToRecentlyViewed(path);
+        UpdateTimeAgo();
+    }
+
+    private void AddToRecentlyViewed(string url)
+    {
+        // Don't add if it's already the most recent
+        if (RecentlyViewed.Any() && RecentlyViewed[0].Url == url)
+            return;
+
+        // Remove if already exists
+        var existing = RecentlyViewed.FirstOrDefault(x => x.Url == url);
+        if (existing != null)
+        {
+            RecentlyViewed.Remove(existing);
+        }
+
+        var title = GetPageTitle(url);
+        var icon = GetPageIcon(url);
+        
+        var item = new RecentlyViewedItem 
+        { 
+            Title = title, 
+            Icon = icon, 
+            Url = url, 
+            TimeAgo = "Just now",
+            ViewedAt = DateTime.Now
+        };
+
+        RecentlyViewed.Insert(0, item);
+        
+        // Keep only last 5 items
+        if (RecentlyViewed.Count > 5)
+        {
+            RecentlyViewed = RecentlyViewed.Take(5).ToList();
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateTimeAgo()
+    {
+        foreach (var item in RecentlyViewed)
+        {
+            var elapsed = DateTime.Now - item.ViewedAt;
+            item.TimeAgo = elapsed.TotalMinutes < 1 ? "Just now" :
+                           elapsed.TotalMinutes < 60 ? $"{(int)elapsed.TotalMinutes} min ago" :
+                           elapsed.TotalHours < 24 ? $"{(int)elapsed.TotalHours}h ago" :
+                           $"{(int)elapsed.TotalDays}d ago";
+        }
+    }
+
+    private string GetPageTitle(string url)
+    {
+        return url switch
+        {
+            "/" => "Dashboard",
+            "/counter" => "Counter",
+            "/products" => "Products",
+            "/categories" => "Categories",
+            _ => "Unknown Page"
+        };
+    }
+
+    private string GetPageIcon(string url)
+    {
+        return url switch
+        {
+            "/" => "bi-house-door-fill",
+            "/counter" => "bi-plus-square-fill",
+            "/products" => "bi-box-seam",
+            "/categories" => "bi-folder",
+            _ => "bi-circle"
+        };
+    }
+
+    private bool IsActive(string href)
+    {
+        var currentUrl = new Uri(Navigation.Uri).AbsolutePath;
+        return currentUrl == href || (href == "/" && currentUrl == "/");
+    }
+
+    private void NavigateToHome() => Navigation.NavigateTo("/");
+    private void NavigateToCounter() => Navigation.NavigateTo("/counter");
+    private void NavigateToProducts() => Navigation.NavigateTo("/products");
+    private void NavigateToCategories() => Navigation.NavigateTo("/categories");
+    private void NavigateToPage(string url) => Navigation.NavigateTo(url);
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}
+
+<style>
+    .nav-menu {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        transition: width 0.3s ease;
+    }
+
+    .nav-items {
+        flex: 1;
+        padding: 0.5rem 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    /* Custom scrollbar */
+    .nav-items::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .nav-items::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .nav-items::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 2px;
+    }
+
+    .nav-items::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    .nav-item {
+        position: relative;
+        margin: 0.25rem 0;
+    }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        color: var(--sidebar-text, white);
+        text-decoration: none;
+        border-radius: 0.5rem;
+        margin: 0 0.5rem;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: var(--sidebar-text, white);
+    }
+
+    .nav-icon-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        width: 100%;
+        position: relative;
+    }
+
+    .nav-icon {
+        font-size: 1.25rem;
+        min-width: 1.25rem;
+        text-align: center;
+        transition: transform 0.2s ease;
+    }
+
+    .nav-text {
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        transition: opacity 0.2s ease;
+    }
+
+    /* Tooltip for collapsed state */
+    .nav-tooltip {
+        position: absolute;
+        left: 100%;
+        margin-left: 1rem;
+        padding: 0.5rem 0.75rem;
+        background: var(--tooltip-bg, #1e293b);
+        color: white;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(-10px);
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        z-index: 1000;
+    }
+
+    .nav-tooltip::before {
+        content: '';
+        position: absolute;
+        left: -4px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 0;
+        height: 0;
+        border-top: 4px solid transparent;
+        border-bottom: 4px solid transparent;
+        border-right: 4px solid var(--tooltip-bg, #1e293b);
+    }
+
+    .collapsed .nav-link:hover .nav-tooltip {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    .nav-indicator {
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 3px;
+        height: 60%;
+        background: var(--primary-color, #3498db);
+        border-radius: 0 2px 2px 0;
+    }
+
+    /* Active state */
+    .nav-item.active .nav-link {
+        background-color: rgba(52, 152, 219, 0.2);
+        color: var(--primary-color, #3498db);
+    }
+
+    .nav-item.active .nav-icon {
+        color: var(--primary-color, #3498db);
+        transform: scale(1.1);
+    }
+
+    /* Recently Viewed Section */
+    .recently-viewed {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1rem 0.5rem;
+        margin-top: auto;
+        opacity: 1;
+        transition: opacity 0.3s ease;
+    }
+
+    .collapsed .recently-viewed {
+        display: none;
+    }
+
+    .recently-viewed-header {
+        display: flex;
+        align-items: center;
+        padding: 0 0.5rem 0.5rem;
+        color: var(--sidebar-text, white);
+        opacity: 0.8;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .recently-viewed-items {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .recently-viewed-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        color: var(--sidebar-text, white);
+    }
+
+    .recently-viewed-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .recent-icon {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        font-size: 0.875rem;
+        flex-shrink: 0;
+    }
+
+    .recent-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .recent-title {
+        font-size: 0.875rem;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .recent-time {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        white-space: nowrap;
+    }
+
+    /* Collapsed state adjustments */
+    .collapsed .nav-link {
+        justify-content: center;
+        padding: 0.75rem 0.5rem;
+    }
+
+    .collapsed .nav-icon-wrapper {
+        justify-content: center;
+    }
+
+    .collapsed .nav-text {
+        display: none;
+    }
+
+    /* Mobile styles */
+    .mobile-nav {
+        width: 100%;
+    }
+
+    .mobile-nav .nav-items {
+        padding: 0.25rem 0;
+    }
+
+    .mobile-nav .nav-link {
+        padding: 0.625rem 0.75rem;
+        margin: 0 0.25rem;
+    }
+
+    .mobile-nav .nav-icon {
+        font-size: 1.125rem;
+    }
+
+    .mobile-nav .nav-text {
+        font-size: 0.875rem;
+    }
+
+    .mobile-nav .recently-viewed {
+        padding: 0.75rem 0.25rem;
+    }
+
+    /* Tablet styles (768px - 1024px) */
+    @@media (min-width: 768px) and (max-width: 1024px) {
+        .nav-link {
+            padding: 0.625rem 0.875rem;
+        }
+
+        .nav-icon {
+            font-size: 1.125rem;
+        }
+
+        .nav-text {
+            font-size: 0.9375rem;
+        }
+
+        .recently-viewed-header {
+            font-size: 0.8125rem;
+        }
+
+        .recent-title {
+            font-size: 0.8125rem;
+        }
+
+        .recent-time {
+            font-size: 0.6875rem;
+        }
+    }
+
+    /* Small screens (max 640px) */
+    @@media (max-width: 640px) {
+        .nav-items {
+            padding: 0.25rem 0;
+        }
+
+        .nav-link {
+            padding: 0.5rem 0.75rem;
+            margin: 0 0.25rem;
+        }
+
+        .nav-icon {
+            font-size: 1rem;
+        }
+
+        .nav-text {
+            font-size: 0.875rem;
+        }
+
+        .recently-viewed {
+            padding: 0.75rem 0.25rem;
+        }
+
+        .recently-viewed-header {
+            font-size: 0.75rem;
+            padding: 0 0.25rem 0.5rem;
+        }
+
+        .recently-viewed-item {
+            padding: 0.375rem 0.5rem;
+        }
+
+        .recent-icon {
+            width: 20px;
+            height: 20px;
+            font-size: 0.75rem;
+        }
+
+        .recent-title {
+            font-size: 0.8125rem;
+        }
+
+        .recent-time {
+            font-size: 0.6875rem;
+        }
+    }
+
+    /* Extra small screens (max 380px) */
+    @@media (max-width: 380px) {
+        .nav-link {
+            padding: 0.5rem;
+        }
+
+        .nav-icon-wrapper {
+            gap: 0.5rem;
+        }
+
+        .nav-text {
+            font-size: 0.8125rem;
+        }
+
+        .recently-viewed-item {
+            gap: 0.375rem;
+        }
+    }
+
+    /* Desktop large screens (min 1920px) */
+    @@media (min-width: 1920px) {
+        .nav-link {
+            padding: 0.875rem 1.25rem;
+        }
+
+        .nav-icon {
+            font-size: 1.375rem;
+        }
+
+        .nav-text {
+            font-size: 1rem;
+        }
+
+        .recently-viewed-header {
+            font-size: 0.9375rem;
+        }
+
+        .recent-title {
+            font-size: 0.9375rem;
+        }
+    }
+
+    /* High contrast mode support */
+    @@media (prefers-contrast: high) {
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-item.active .nav-link {
+            background-color: rgba(52, 152, 219, 0.3);
+            border: 1px solid var(--primary-color, #3498db);
+        }
+
+        .nav-indicator {
+            width: 4px;
+        }
+    }
+
+    /* Reduced motion support */
+    @@media (prefers-reduced-motion: reduce) {
+        .nav-menu,
+        .nav-link,
+        .nav-icon,
+        .nav-text,
+        .nav-tooltip,
+        .recently-viewed {
+            transition: none;
+        }
+    }
+
+    /* Dark mode adjustments */
+    @@media (prefers-color-scheme: dark) {
+        .nav-tooltip {
+            background: #0f172a;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-tooltip::before {
+            border-right-color: #0f172a;
+        }
+    }
+</style>
