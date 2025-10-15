@@ -1,0 +1,139 @@
+@using Microsoft.AspNetCore.Components.Routing
+@inject NavigationManager Navigation
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        @foreach (var crumb in Breadcrumbs)
+        {
+            if (crumb.IsActive)
+            {
+                <li class="breadcrumb-item active" aria-current="page">@crumb.Title</li>
+            }
+            else
+            {
+                <li class="breadcrumb-item">
+                    <a href="@crumb.Url">@crumb.Title</a>
+                </li>
+            }
+        }
+    </ol>
+</nav>
+
+@code {
+    private List<BreadcrumbItem> Breadcrumbs { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+        UpdateBreadcrumbs();
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        UpdateBreadcrumbs();
+    }
+
+    private void UpdateBreadcrumbs()
+    {
+        var currentUrl = new Uri(Navigation.Uri).AbsolutePath;
+
+        Breadcrumbs = currentUrl switch
+        {
+            "/" => new List<BreadcrumbItem>
+            {
+                new BreadcrumbItem { Title = "Home", Url = "/", IsActive = true }
+            },
+            "/counter" => new List<BreadcrumbItem>
+            {
+                new BreadcrumbItem { Title = "Home", Url = "/" },
+                new BreadcrumbItem { Title = "Counter", Url = "/counter", IsActive = true }
+            },
+            "/products" => new List<BreadcrumbItem>
+            {
+                new BreadcrumbItem { Title = "Home", Url = "/" },
+                new BreadcrumbItem { Title = "Products", Url = "/products", IsActive = true }
+            },
+            "/categories" => new List<BreadcrumbItem>
+            {
+                new BreadcrumbItem { Title = "Home", Url = "/" },
+                new BreadcrumbItem { Title = "Categories", Url = "/categories", IsActive = true }
+            },
+            _ => new List<BreadcrumbItem>
+            {
+                new BreadcrumbItem { Title = "Home", Url = "/" },
+                new BreadcrumbItem { Title = "Unknown", Url = currentUrl, IsActive = true }
+            }
+        };
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}
+
+<style>
+    .breadcrumb {
+        background: transparent;
+        margin: 0;
+        padding: 0;
+        font-size: 0.875rem;
+    }
+
+    .breadcrumb-item {
+        color: var(--text-muted, #6b7280);
+    }
+
+    .breadcrumb-item.active {
+        color: var(--text-color, #374151);
+        font-weight: 500;
+    }
+
+    .breadcrumb-item a {
+        color: var(--primary-color, #3b82f6);
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
+
+    .breadcrumb-item a:hover {
+        color: var(--primary-hover, #2563eb);
+        text-decoration: underline;
+    }
+
+    .breadcrumb-item + .breadcrumb-item::before {
+        color: var(--text-muted, #6b7280);
+        content: ">";
+    }
+
+    /* Dark Theme */
+    .dark-theme .breadcrumb-item {
+        color: var(--text-muted-dark, #9ca3af);
+    }
+
+    .dark-theme .breadcrumb-item.active {
+        color: var(--text-color-dark, #f9fafb);
+    }
+
+    .dark-theme .breadcrumb-item a {
+        color: var(--primary-color-dark, #60a5fa);
+    }
+
+    .dark-theme .breadcrumb-item a:hover {
+        color: var(--primary-hover-dark, #3b82f6);
+    }
+
+    .dark-theme .breadcrumb-item + .breadcrumb-item::before {
+        color: var(--text-muted-dark, #9ca3af);
+    }
+</style>
+
+@code {
+    public class BreadcrumbItem
+    {
+        public string Title { get; set; } = "";
+        public string Url { get; set; } = "";
+        public bool IsActive { get; set; }
+    }
+}

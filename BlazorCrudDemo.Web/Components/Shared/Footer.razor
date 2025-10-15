@@ -1,0 +1,157 @@
+<Footer>
+    <div class="footer-content">
+        <div class="footer-section">
+            <h5>Blazor CRUD Demo</h5>
+            <p>A modern web application built with Blazor Server and .NET 8</p>
+        </div>
+
+        <div class="footer-section">
+            <h5>Quick Links</h5>
+            <ul class="footer-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/products">Products</a></li>
+                <li><a href="/categories">Categories</a></li>
+            </ul>
+        </div>
+
+        <div class="footer-section">
+            <h5>Contact</h5>
+            <div class="social-links">
+                <a href="https://github.com" target="_blank" title="GitHub">
+                    <i class="bi bi-github"></i>
+                </a>
+                <a href="https://linkedin.com" target="_blank" title="LinkedIn">
+                    <i class="bi bi-linkedin"></i>
+                </a>
+                <a href="https://x.com" target="_blank" title="X (formerly Twitter)">
+                    <svg class="x-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <g>
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </g>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-bottom">
+        <p>&copy; @CurrentYear Blazor CRUD Demo. All rights reserved.</p>
+    </div>
+</Footer>
+
+@code {
+    private int CurrentYear => DateTime.Now.Year;
+}
+
+<style>
+    .footer {
+        background: var(--sidebar-bg, #2c3e50);
+        color: var(--sidebar-text, white);
+        margin-top: auto;
+    }
+
+    .footer-content {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+        padding: 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .footer-section h5 {
+        margin-bottom: 1rem;
+        color: var(--primary-color, #3498db);
+        font-weight: 600;
+    }
+
+    .footer-section p {
+        opacity: 0.8;
+        line-height: 1.6;
+    }
+
+    .footer-links {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .footer-links li {
+        margin-bottom: 0.5rem;
+    }
+
+    .footer-links a {
+        color: var(--sidebar-text, white);
+        text-decoration: none;
+        opacity: 0.8;
+        transition: opacity 0.2s ease;
+    }
+
+    .footer-links a:hover {
+        opacity: 1;
+        color: var(--primary-color, #3498db);
+    }
+
+    .social-links {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .social-links a {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        color: var(--sidebar-text, white);
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .social-links a:hover {
+        background: var(--primary-color, #3498db);
+        transform: translateY(-2px);
+    }
+
+    .social-links i {
+        font-size: 1.2rem;
+    }
+
+    .x-icon {
+        width: 1.2rem;
+        height: 1.2rem;
+        fill: currentColor;
+    }
+
+    .footer-bottom {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1rem 2rem;
+        text-align: center;
+        opacity: 0.7;
+    }
+
+    .footer-bottom p {
+        margin: 0;
+        font-size: 0.875rem;
+    }
+
+    /* Dark theme adjustments */
+    .dark-theme .footer {
+        background: var(--sidebar-bg, #1a1a1a);
+    }
+
+    /* Mobile responsive */
+    @@media (max-width: 768px) {
+        .footer-content {
+            grid-template-columns: 1fr;
+            padding: 1.5rem;
+            gap: 1.5rem;
+        }
+
+        .footer-bottom {
+            padding: 1rem 1.5rem;
+        }
+    }
+</style>

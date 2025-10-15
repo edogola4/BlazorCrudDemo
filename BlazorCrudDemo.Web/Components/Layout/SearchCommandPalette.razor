@@ -1,0 +1,470 @@
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+
+@if (Visible)
+{
+    <div class="search-palette-overlay" @onclick="Close">
+        <div class="search-palette" @onclick:stopPropagation="true">
+            <div class="search-palette-header">
+                <div class="search-input-wrapper">
+                    <i class="bi bi-search search-icon"></i>
+                    <input type="text"
+                           class="search-input"
+                           placeholder="Type a command or search..."
+                           @bind="SearchQuery"
+                           @bind:event="oninput"
+                           @onkeydown="HandleKeyDown"
+                           @ref="searchInput" />
+                    @if (!string.IsNullOrEmpty(SearchQuery))
+                    {
+                        <button class="search-clear-btn" @onclick="ClearSearch" title="Clear Search">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <div class="search-palette-body">
+                @if (FilteredCommands.Any())
+                {
+                    <div class="search-results">
+                        @foreach (var command in FilteredCommands.Take(8))
+                        {
+                            <div class="search-result-item @(command == SelectedCommand ? "selected" : "")"
+                                 @onclick="() => SelectCommand(command)">
+                                <div class="result-icon">
+                                    <i class="bi @command.Icon"></i>
+                                </div>
+                                <div class="result-content">
+                                    <div class="result-title">@command.Title</div>
+                                    <div class="result-description">@command.Description</div>
+                                </div>
+                                <div class="result-shortcut">
+                                    @command.Shortcut
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(SearchQuery))
+                {
+                    <div class="no-results">
+                        <i class="bi bi-search no-results-icon"></i>
+                        <p>No results found for "@SearchQuery"</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="recent-commands">
+                        <div class="section-header">
+                            <i class="bi bi-clock-history me-2"></i>
+                            Recent Commands
+                        </div>
+                        @foreach (var command in RecentCommands.Take(5))
+                        {
+                            <div class="search-result-item"
+                                 @onclick="() => SelectCommand(command)">
+                                <div class="result-icon">
+                                    <i class="bi @command.Icon"></i>
+                                </div>
+                                <div class="result-content">
+                                    <div class="result-title">@command.Title</div>
+                                    <div class="result-description">@command.Description</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="search-palette-footer">
+                <div class="keyboard-hints">
+                    <span class="hint-item">
+                        <kbd>↑↓</kbd> Navigate
+                    </span>
+                    <span class="hint-item">
+                        <kbd>Enter</kbd> Select
+                    </span>
+                    <span class="hint-item">
+                        <kbd>Esc</kbd> Close
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public EventCallback<string> OnCommandSelected { get; set; }
+
+    private string SearchQuery { get; set; } = "";
+    private CommandItem? SelectedCommand { get; set; }
+    private ElementReference searchInput;
+
+    private List<CommandItem> AllCommands { get; set; } = new();
+    private List<CommandItem> RecentCommands { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        InitializeCommands();
+        InitializeRecentCommands();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Visible && firstRender)
+        {
+            await searchInput.FocusAsync();
+        }
+    }
+
+    private void InitializeCommands()
+    {
+        AllCommands = new List<CommandItem>
+        {
+            new CommandItem { Title = "Home", Description = "Go to dashboard", Icon = "bi-house-door-fill", Url = "/", Shortcut = "" },
+            new CommandItem { Title = "Products", Description = "Manage products", Icon = "bi-box-seam", Url = "/products", Shortcut = "P" },
+            new CommandItem { Title = "Categories", Description = "Manage categories", Icon = "bi-folder", Url = "/categories", Shortcut = "C" },
+            new CommandItem { Title = "Counter", Description = "Counter demo page", Icon = "bi-plus-square-fill", Url = "/counter", Shortcut = "" },
+            new CommandItem { Title = "Settings", Description = "Application settings", Icon = "bi-gear", Url = "/settings", Shortcut = "" },
+            new CommandItem { Title = "Profile", Description = "User profile", Icon = "bi-person-circle", Url = "/profile", Shortcut = "" },
+            new CommandItem { Title = "Help", Description = "Help and documentation", Icon = "bi-question-circle", Url = "/help", Shortcut = "" }
+        };
+    }
+
+    private void InitializeRecentCommands()
+    {
+        RecentCommands = new List<CommandItem>
+        {
+            new CommandItem { Title = "Products", Description = "Manage products", Icon = "bi-box-seam", Url = "/products" },
+            new CommandItem { Title = "Categories", Description = "Manage categories", Icon = "bi-folder", Url = "/categories" },
+            new CommandItem { Title = "Home", Description = "Go to dashboard", Icon = "bi-house-door-fill", Url = "/" }
+        };
+    }
+
+    private IEnumerable<CommandItem> FilteredCommands =>
+        string.IsNullOrEmpty(SearchQuery)
+            ? Enumerable.Empty<CommandItem>()
+            : AllCommands.Where(cmd =>
+                cmd.Title.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                cmd.Description.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase));
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                SelectNextCommand();
+                break;
+            case "ArrowUp":
+                SelectPreviousCommand();
+                break;
+            case "Enter":
+                if (SelectedCommand != null)
+                {
+                    ExecuteCommand(SelectedCommand);
+                }
+                break;
+            case "Escape":
+                Close();
+                break;
+        }
+    }
+
+    private void SelectNextCommand()
+    {
+        var commands = FilteredCommands.ToList();
+        if (!commands.Any()) return;
+
+        var currentIndex = commands.IndexOf(SelectedCommand ?? commands.First());
+        var nextIndex = (currentIndex + 1) % commands.Count;
+        SelectedCommand = commands[nextIndex];
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void SelectPreviousCommand()
+    {
+        var commands = FilteredCommands.ToList();
+        if (!commands.Any()) return;
+
+        var currentIndex = commands.IndexOf(SelectedCommand ?? commands.First());
+        var prevIndex = currentIndex == 0 ? commands.Count - 1 : currentIndex - 1;
+        SelectedCommand = commands[prevIndex];
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void SelectCommand(CommandItem command)
+    {
+        ExecuteCommand(command);
+    }
+
+    private void ExecuteCommand(CommandItem command)
+    {
+        Visible = false;
+        VisibleChanged.InvokeAsync(false);
+        OnCommandSelected.InvokeAsync(command.Url);
+    }
+
+    private void ClearSearch()
+    {
+        SearchQuery = "";
+        SelectedCommand = null;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void Close()
+    {
+        Visible = false;
+        VisibleChanged.InvokeAsync(false);
+        SearchQuery = "";
+        SelectedCommand = null;
+        InvokeAsync(StateHasChanged);
+    }
+}
+
+<style>
+    .search-palette-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        z-index: 9999;
+        padding-top: 10vh;
+    }
+
+    .search-palette {
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        width: 100%;
+        max-width: 600px;
+        max-height: 80vh;
+        overflow: hidden;
+        border: 1px solid var(--border-color, #e5e7eb);
+    }
+
+    .search-palette-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border-color, #e5e7eb);
+    }
+
+    .search-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        background: var(--search-bg, #f9fafb);
+        border: 1px solid var(--border-color, #d1d5db);
+        border-radius: 0.5rem;
+        padding: 0.75rem 1rem;
+    }
+
+    .search-icon {
+        color: var(--text-muted, #6b7280);
+        margin-right: 0.75rem;
+        font-size: 1.125rem;
+    }
+
+    .search-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 1rem;
+        color: var(--text-color, #374151);
+    }
+
+    .search-input::placeholder {
+        color: var(--text-muted, #6b7280);
+    }
+
+    .search-clear-btn {
+        background: none;
+        border: none;
+        color: var(--text-muted, #6b7280);
+        cursor: pointer;
+        padding: 0.25rem;
+        border-radius: 50%;
+        margin-left: 0.5rem;
+        transition: color 0.2s ease;
+    }
+
+    .search-clear-btn:hover {
+        color: var(--text-color, #374151);
+    }
+
+    .search-palette-body {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .search-results {
+        padding: 0.5rem 0;
+    }
+
+    .search-result-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1.5rem;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        border-left: 3px solid transparent;
+    }
+
+    .search-result-item:hover,
+    .search-result-item.selected {
+        background-color: var(--hover-bg, #f3f4f6);
+        border-left-color: var(--primary-color, #3b82f6);
+    }
+
+    .result-icon {
+        width: 40px;
+        height: 40px;
+        background: var(--primary-color, #3b82f6);
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.25rem;
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+
+    .result-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .result-title {
+        font-weight: 600;
+        color: var(--text-color, #374151);
+        margin-bottom: 0.25rem;
+    }
+
+    .result-description {
+        font-size: 0.875rem;
+        color: var(--text-muted, #6b7280);
+    }
+
+    .result-shortcut {
+        background: var(--shortcut-bg, #f3f4f6);
+        color: var(--text-muted, #6b7280);
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin-left: 1rem;
+        flex-shrink: 0;
+    }
+
+    .no-results {
+        padding: 3rem 1.5rem;
+        text-align: center;
+        color: var(--text-muted, #6b7280);
+    }
+
+    .no-results-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .recent-commands {
+        padding: 1rem 0;
+    }
+
+    .section-header {
+        padding: 0.75rem 1.5rem 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-muted, #6b7280);
+        border-bottom: 1px solid var(--border-color, #e5e7eb);
+        margin-bottom: 0.5rem;
+    }
+
+    .search-palette-footer {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid var(--border-color, #e5e7eb);
+        background: var(--footer-bg, #f9fafb);
+    }
+
+    .keyboard-hints {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        font-size: 0.75rem;
+        color: var(--text-muted, #6b7280);
+    }
+
+    .hint-item {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    kbd {
+        background: var(--kbd-bg, #e5e7eb);
+        border: 1px solid var(--border-color, #d1d5db);
+        border-radius: 0.25rem;
+        padding: 0.125rem 0.375rem;
+        font-size: 0.75rem;
+        font-family: monospace;
+    }
+
+    /* Dark Theme */
+    .dark-theme .search-palette {
+        background: var(--palette-bg-dark, #374151);
+        border-color: var(--border-color-dark, #4b5563);
+    }
+
+    .dark-theme .search-input-wrapper {
+        background: var(--search-bg-dark, #4b5563);
+        border-color: var(--border-color-dark, #4b5563);
+    }
+
+    .dark-theme .search-result-item:hover,
+    .dark-theme .search-result-item.selected {
+        background-color: var(--hover-bg-dark, #4b5563);
+    }
+
+    .dark-theme .result-icon {
+        background: var(--primary-color-dark, #60a5fa);
+    }
+
+    .dark-theme .result-title {
+        color: var(--text-color-dark, #f9fafb);
+    }
+
+    .dark-theme .result-description {
+        color: var(--text-muted-dark, #9ca3af);
+    }
+
+    .dark-theme .search-palette-footer {
+        background: var(--footer-bg-dark, #4b5563);
+        border-color: var(--border-color-dark, #4b5563);
+    }
+
+    .dark-theme kbd {
+        background: var(--kbd-bg-dark, #4b5563);
+        border-color: var(--border-color-dark, #4b5563);
+    }
+</style>
+
+@code {
+    public class CommandItem
+    {
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Icon { get; set; } = "";
+        public string Url { get; set; } = "";
+        public string Shortcut { get; set; } = "";
+    }
+}

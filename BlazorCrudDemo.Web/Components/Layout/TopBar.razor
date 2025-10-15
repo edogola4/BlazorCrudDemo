@@ -1,0 +1,554 @@
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+
+<div class="top-bar">
+    <div class="top-bar-left">
+        <!-- Mobile Menu Toggle -->
+        <button class="mobile-menu-btn" @onclick="ToggleMobileMenu" title="Toggle Menu">
+            <i class="bi bi-list"></i>
+        </button>
+
+        <!-- Breadcrumb (simplified for demo) -->
+        <div class="breadcrumb-simple">
+            <span class="breadcrumb-item">Dashboard</span>
+        </div>
+    </div>
+
+    <div class="top-bar-center">
+        <!-- Global Search -->
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text"
+                       class="search-input"
+                       placeholder="Search (Ctrl+K)..."
+                       @onkeydown="HandleSearchKeyDown"
+                       @bind="SearchQuery"
+                       @bind:event="oninput" />
+                @if (!string.IsNullOrEmpty(SearchQuery))
+                {
+                    <button class="search-clear-btn" @onclick="ClearSearch" title="Clear Search">
+                        <i class="bi bi-x"></i>
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="top-bar-right">
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <button class="action-btn" @onclick="HandleQuickAction" title="Quick Action">
+                <i class="bi bi-lightning-charge"></i>
+            </button>
+            <button class="action-btn" @onclick="HandleNewItem" title="New Item">
+                <i class="bi bi-plus-circle"></i>
+            </button>
+        </div>
+
+        <!-- Notifications -->
+        <div class="notification-container">
+            <button class="notification-btn" @onclick="ToggleNotifications" title="Notifications">
+                <i class="bi bi-bell"></i>
+                @if (NotificationCount > 0)
+                {
+                    <span class="notification-badge">@NotificationCount</span>
+                }
+            </button>
+        </div>
+
+        <!-- Settings -->
+        <div class="settings-container">
+            <button class="settings-btn" @onclick="ToggleSettings" title="Settings">
+                <i class="bi bi-gear"></i>
+            </button>
+        </div>
+
+        <!-- Theme Toggle -->
+        <div class="theme-toggle">
+            <button class="theme-btn @(IsDarkMode ? "dark" : "light")" @onclick="ToggleTheme" title="@(IsDarkMode ? "Light Mode" : "Dark Mode")">
+                <i class="bi @(IsDarkMode ? "bi-sun" : "bi-moon")"></i>
+            </button>
+        </div>
+
+        <!-- Fullscreen Toggle -->
+        <div class="fullscreen-toggle">
+            <button class="fullscreen-btn" @onclick="ToggleFullscreen" title="@(IsFullscreen ? "Exit Fullscreen" : "Enter Fullscreen")">
+                <i class="bi @(IsFullscreen ? "bi-fullscreen-exit" : "bi-arrows-fullscreen")"></i>
+            </button>
+        </div>
+
+        <!-- User Dropdown -->
+        <div class="user-dropdown-container">
+            <button class="user-dropdown-btn" @onclick="ToggleUserDropdown" title="User Menu">
+                <div class="user-avatar-small">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <span class="user-name">Brandon S.</span>
+                <i class="bi bi-chevron-down dropdown-arrow"></i>
+            </button>
+
+            @if (ShowUserDropdown)
+            {
+                <div class="user-dropdown-menu">
+                    <div class="dropdown-header">
+                        <div class="user-info">
+                            <div class="user-name">Brandon Smith</div>
+                            <div class="user-email">brandon@example.com</div>
+                        </div>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <a href="#" class="dropdown-item">
+                        <i class="bi bi-person me-2"></i>Profile
+                    </a>
+                    <a href="#" class="dropdown-item">
+                        <i class="bi bi-gear me-2"></i>Settings
+                    </a>
+                    <a href="#" class="dropdown-item">
+                        <i class="bi bi-question-circle me-2"></i>Help & Support
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a href="#" class="dropdown-item text-danger">
+                        <i class="bi bi-box-arrow-right me-2"></i>Sign Out
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool IsDarkMode { get; set; }
+    [Parameter] public int NotificationCount { get; set; }
+    [Parameter] public EventCallback<bool> IsDarkModeChanged { get; set; }
+    [Parameter] public EventCallback OnSearchCommand { get; set; }
+    [Parameter] public EventCallback OnToggleFullscreen { get; set; }
+
+    private string SearchQuery { get; set; } = "";
+    private bool ShowUserDropdown { get; set; }
+    private bool IsFullscreen { get; set; }
+
+    private void HandleSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            OnSearchCommand.InvokeAsync();
+        }
+        else if (e.Key == "Escape")
+        {
+            ClearSearch();
+        }
+    }
+
+    private void ClearSearch()
+    {
+        SearchQuery = "";
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleMobileMenu()
+    {
+        // In a real app, this would toggle mobile menu visibility
+        // For now, we'll just show a simple alert
+        JSRuntime.InvokeVoidAsync("alert", "Mobile menu toggle clicked");
+    }
+
+    private void HandleQuickAction()
+    {
+        JSRuntime.InvokeVoidAsync("alert", "Quick action clicked");
+    }
+
+    private void HandleNewItem()
+    {
+        JSRuntime.InvokeVoidAsync("alert", "New item clicked");
+    }
+
+    private void ToggleNotifications()
+    {
+        JSRuntime.InvokeVoidAsync("alert", "Notifications clicked");
+    }
+
+    private void ToggleSettings()
+    {
+        JSRuntime.InvokeVoidAsync("alert", "Settings clicked");
+    }
+
+    private void ToggleTheme()
+    {
+        IsDarkMode = !IsDarkMode;
+        IsDarkModeChanged.InvokeAsync(IsDarkMode);
+    }
+
+    private void ToggleFullscreen()
+    {
+        IsFullscreen = !IsFullscreen;
+        OnToggleFullscreen.InvokeAsync();
+    }
+
+    private void ToggleUserDropdown()
+    {
+        ShowUserDropdown = !ShowUserDropdown;
+        InvokeAsync(StateHasChanged);
+    }
+}
+
+<style>
+    .top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 60px;
+        background: var(--topbar-bg, white);
+        border-bottom: 1px solid var(--border-color, #e5e7eb);
+        padding: 0 1rem;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+
+    .top-bar-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .top-bar-center {
+        flex: 1;
+        max-width: 400px;
+        margin: 0 2rem;
+    }
+
+    .top-bar-right {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    /* Mobile Menu Button */
+    .mobile-menu-btn {
+        display: none;
+        background: none;
+        border: none;
+        color: var(--text-color, #374151);
+        font-size: 1.25rem;
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .mobile-menu-btn:hover {
+        background-color: var(--hover-bg, #f3f4f6);
+    }
+
+    /* Breadcrumb */
+    .breadcrumb-simple {
+        font-size: 0.875rem;
+        color: var(--text-muted, #6b7280);
+    }
+
+    /* Search */
+    .search-container {
+        width: 100%;
+    }
+
+    .search-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        background: var(--search-bg, #f9fafb);
+        border: 1px solid var(--border-color, #d1d5db);
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .search-input-wrapper:focus-within {
+        border-color: var(--primary-color, #3b82f6);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .search-icon {
+        color: var(--text-muted, #6b7280);
+        margin-right: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .search-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 0.875rem;
+        color: var(--text-color, #374151);
+    }
+
+    .search-input::placeholder {
+        color: var(--text-muted, #6b7280);
+    }
+
+    .search-clear-btn {
+        background: none;
+        border: none;
+        color: var(--text-muted, #6b7280);
+        cursor: pointer;
+        padding: 0.25rem;
+        border-radius: 50%;
+        margin-left: 0.5rem;
+        transition: color 0.2s ease;
+    }
+
+    .search-clear-btn:hover {
+        color: var(--text-color, #374151);
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .action-btn {
+        background: none;
+        border: none;
+        color: var(--text-muted, #6b7280);
+        font-size: 1.125rem;
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .action-btn:hover {
+        background-color: var(--hover-bg, #f3f4f6);
+        color: var(--primary-color, #3b82f6);
+    }
+
+    /* Notifications */
+    .notification-container {
+        position: relative;
+    }
+
+    .notification-btn {
+        position: relative;
+        background: none;
+        border: none;
+        color: var(--text-muted, #6b7280);
+        font-size: 1.125rem;
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .notification-btn:hover {
+        background-color: var(--hover-bg, #f3f4f6);
+        color: var(--primary-color, #3b82f6);
+    }
+
+    .notification-badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background: #ef4444;
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.125rem 0.375rem;
+        border-radius: 9999px;
+        min-width: 1.25rem;
+        text-align: center;
+        line-height: 1;
+    }
+
+    /* Settings */
+    .settings-btn {
+        background: none;
+        border: none;
+        color: var(--text-muted, #6b7280);
+        font-size: 1.125rem;
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .settings-btn:hover {
+        background-color: var(--hover-bg, #f3f4f6);
+        color: var(--primary-color, #3b82f6);
+    }
+
+    /* Theme Toggle */
+    .theme-btn {
+        background: none;
+        border: none;
+        color: var(--text-muted, #6b7280);
+        font-size: 1.125rem;
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .theme-btn:hover {
+        background-color: var(--hover-bg, #f3f4f6);
+        color: var(--primary-color, #3b82f6);
+    }
+
+    .theme-btn.dark {
+        color: #fbbf24;
+    }
+
+    /* Fullscreen Toggle */
+    .fullscreen-btn {
+        background: none;
+        border: none;
+        color: var(--text-muted, #6b7280);
+        font-size: 1.125rem;
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .fullscreen-btn:hover {
+        background-color: var(--hover-bg, #f3f4f6);
+        color: var(--primary-color, #3b82f6);
+    }
+
+    /* User Dropdown */
+    .user-dropdown-container {
+        position: relative;
+    }
+
+    .user-dropdown-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: none;
+        border: 1px solid var(--border-color, #d1d5db);
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: var(--text-color, #374151);
+    }
+
+    .user-dropdown-btn:hover {
+        background-color: var(--hover-bg, #f3f4f6);
+        border-color: var(--primary-color, #3b82f6);
+    }
+
+    .user-avatar-small {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--primary-color, #3b82f6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 0.875rem;
+    }
+
+    .user-name {
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .dropdown-arrow {
+        font-size: 0.75rem;
+        transition: transform 0.2s ease;
+    }
+
+    .user-dropdown-container.active .dropdown-arrow {
+        transform: rotate(180deg);
+    }
+
+    .user-dropdown-menu {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        min-width: 200px;
+        background: white;
+        border: 1px solid var(--border-color, #e5e7eb);
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        z-index: 1000;
+        margin-top: 0.5rem;
+    }
+
+    .dropdown-header {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color, #e5e7eb);
+    }
+
+    .user-info {
+        text-align: center;
+    }
+
+    .user-name {
+        font-weight: 600;
+        color: var(--text-color, #374151);
+        margin-bottom: 0.25rem;
+    }
+
+    .user-email {
+        font-size: 0.875rem;
+        color: var(--text-muted, #6b7280);
+    }
+
+    .dropdown-divider {
+        height: 1px;
+        background: var(--border-color, #e5e7eb);
+        margin: 0.5rem 0;
+    }
+
+    .dropdown-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        color: var(--text-color, #374151);
+        text-decoration: none;
+        font-size: 0.875rem;
+        transition: background-color 0.2s ease;
+    }
+
+    .dropdown-item:hover {
+        background-color: var(--hover-bg, #f3f4f6);
+    }
+
+    .dropdown-item.text-danger {
+        color: #dc2626;
+    }
+
+    .dropdown-item.text-danger:hover {
+        background-color: #fef2f2;
+        color: #dc2626;
+    }
+
+    /* Dark Theme */
+    .dark-theme .top-bar {
+        background: var(--topbar-bg-dark, #374151);
+        border-bottom-color: var(--border-color-dark, #4b5563);
+    }
+
+    .dark-theme .search-input-wrapper {
+        background: var(--search-bg-dark, #4b5563);
+        border-color: var(--border-color-dark, #4b5563);
+    }
+
+    .dark-theme .user-dropdown-menu {
+        background: var(--dropdown-bg-dark, #374151);
+        border-color: var(--border-color-dark, #4b5563);
+    }
+
+    .dark-theme .dropdown-item {
+        color: var(--text-color-dark, #f9fafb);
+    }
+
+    .dark-theme .dropdown-item:hover {
+        background-color: var(--hover-bg-dark, #4b5563);
+    }
+</style>
