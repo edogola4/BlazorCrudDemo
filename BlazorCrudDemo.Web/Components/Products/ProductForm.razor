@@ -1,0 +1,281 @@
+@using BlazorCrudDemo.Web.Services
+@page "/products/{id:int?}"
+@page "/products/create"
+
+<PageTitle>@(IsEdit ? "Edit Product" : "Create Product") - Blazor CRUD Demo</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-@(IsEdit ? "edit" : "plus") me-2"></i>
+                        @(IsEdit ? "Edit Product" : "Create New Product")
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="Product" EditContext="EditContext" OnValidSubmit="HandleValidSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="alert alert-danger" />
+
+                        <!-- Basic Information Section -->
+                        <div class="row">
+                            <div class="col-12">
+                                <h5 class="section-title">
+                                    <i class="fas fa-info-circle me-2"></i>Basic Information
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <InputText id="name" @bind-Value="Product.Name" class="form-control" placeholder="Product Name" />
+                                    <label for="name">Product Name</label>
+                                    <div class="form-text">Enter the full name of the product</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <InputText id="sku" @bind-Value="Product.SKU" @bind-Value:event="oninput" class="form-control" placeholder="SKU" />
+                                    <label for="sku">SKU</label>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-2" @onclick="GenerateSKU">
+                                        <i class="fas fa-magic"></i> Generate
+                                    </button>
+                                    <div class="form-text">Unique identifier for the product</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Description Section -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <InputRichText @bind-Value="Product.Description" Label="Description" MaxLength="2000" />
+                            </div>
+                        </div>
+
+                        <!-- Pricing and Inventory Section -->
+                        <div class="row">
+                            <div class="col-12">
+                                <h5 class="section-title">
+                                    <i class="fas fa-dollar-sign me-2"></i>Pricing & Inventory
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <InputCurrency @bind-Value="Product.Price" Label="Price" HelpText="Enter the product price" />
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <input type="number" class="form-control" id="stock" @bind="Product.Stock" min="0" />
+                                    <label for="stock">Stock Quantity</label>
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary" @onclick="() => AdjustStock(-1)">-</button>
+                                        <button type="button" class="btn btn-outline-secondary" @onclick="() => AdjustStock(1)">+</button>
+                                    </div>
+                                    <div class="form-text">Current stock level</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <select class="form-select" id="status" @bind="Product.IsActive">
+                                        <option value="true">Active</option>
+                                        <option value="false">Inactive</option>
+                                    </select>
+                                    <label for="status">Status</label>
+                                    <div class="form-text">Product availability status</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Category and Image Section -->
+                        <div class="row">
+                            <div class="col-12">
+                                <h5 class="section-title">
+                                    <i class="fas fa-tags me-2"></i>Category & Image
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <select class="form-select" id="category" @bind="Product.CategoryId">
+                                        <option value="">Select Category</option>
+                                        @foreach (var category in Categories)
+                                        {
+                                            <option value="@category.Id">@category.Name</option>
+                                        }
+                                    </select>
+                                    <label for="category">Category</label>
+                                    <div class="form-text">Choose the product category</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <InputImage @bind-ImageUrl="Product.ImageUrl" Label="Product Image" />
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="row">
+                            <div class="col-12 text-center">
+                                <button type="submit" class="btn btn-primary btn-lg me-3" disabled="@IsSubmitting">
+                                    @if (IsSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                    }
+                                    <i class="fas fa-save me-2"></i>@(IsEdit ? "Update Product" : "Create Product")
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-lg me-3" @onclick="ResetForm">
+                                    <i class="fas fa-undo me-2"></i>Reset
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-lg" @onclick="Cancel">
+                                    <i class="fas fa-times me-2"></i>Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+
+            <!-- Product Preview Panel -->
+            @if (ShowPreview)
+            {
+                <div class="card mt-4 shadow-sm">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-eye me-2"></i>Product Preview
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                @if (!string.IsNullOrEmpty(Product.ImageUrl))
+                                {
+                                    <img src="@Product.ImageUrl" alt="@Product.Name" class="img-fluid rounded" />
+                                }
+                                else
+                                {
+                                    <div class="bg-light d-flex align-items-center justify-content-center rounded" style="height: 200px;">
+                                        <i class="fas fa-image fa-3x text-muted"></i>
+                                    </div>
+                                }
+                            </div>
+                            <div class="col-md-8">
+                                <h4>@Product.Name</h4>
+                                <p class="text-muted">@Product.SKU</p>
+                                <p>@Product.Description</p>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Price:</strong> @Product.Price.ToString("C")
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Stock:</strong> @Product.Stock
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <span class="badge bg-@(Product.AvailabilityStatus == "Active" ? "success" : "secondary")">
+                                        @Product.AvailabilityStatus
+                                    </span>
+                                    @if (Product.CategoryName != null)
+                                    {
+                                        <span class="badge bg-light text-dark ms-2">@Product.CategoryName</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Success Animation Modal -->
+@if (ShowSuccess)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-5">
+                    <div class="success-animation mb-4">
+                        <i class="fas fa-check-circle fa-5x text-success"></i>
+                    </div>
+                    <h4 class="text-success">Success!</h4>
+                    <p>Product @(IsEdit ? "updated" : "created") successfully.</p>
+                    <button class="btn btn-primary" @onclick="CloseSuccessModal">Continue</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .section-title {
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+        color: #495057;
+    }
+
+    .form-floating > .form-control {
+        height: calc(3.5rem + 2px);
+    }
+
+    .image-upload-container {
+        border: 2px dashed #dee2e6;
+        border-radius: 0.375rem;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .image-upload-container:hover {
+        border-color: #007bff;
+    }
+
+    .image-upload-label {
+        display: block;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        width: 100%;
+    }
+
+    .image-preview {
+        position: relative;
+    }
+
+    .remove-image {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+    }
+
+    .drag-over-state {
+        color: #007bff;
+    }
+
+    .upload-prompt {
+        color: #6c757d;
+    }
+
+    .success-animation {
+        animation: bounce 0.6s ease-in-out;
+    }
+
+    @@keyframes bounce {
+        0%, 20%, 53%, 80%, 100% {
+            transform: translate3d(0, 0, 0);
+        }
+        40%, 43% {
+            transform: translate3d(0, -30px, 0);
+        }
+        70% {
+            transform: translate3d(0, -15px, 0);
+        }
+        90% {
+            transform: translate3d(0, -4px, 0);
+        }
+    }
+</style>
+

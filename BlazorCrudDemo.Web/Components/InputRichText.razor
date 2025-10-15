@@ -1,0 +1,61 @@
+@using System.Text.RegularExpressions
+@inherits InputBase<string>
+
+<div class="form-floating mb-3">
+    <textarea class="form-control @(CssClass) @(HasError ? "is-invalid" : "")"
+              id="@Id"
+              placeholder="@Placeholder"
+              rows="@Rows"
+              maxlength="@MaxLength"
+              @bind="CurrentValue"
+              @bind:event="oninput"
+              @attributes="AdditionalAttributes"></textarea>
+    <label for="@Id">@Label</label>
+    @if (ShowCharacterCount && MaxLength > 0)
+    {
+        <div class="d-flex justify-content-between">
+            <div class="form-text">@HelpText</div>
+            <small class="text-muted">@CurrentValue?.Length / @MaxLength characters</small>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(HelpText))
+    {
+        <div class="form-text">@HelpText</div>
+    }
+    <div class="invalid-feedback">
+        @ErrorMessage
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Id { get; set; } = Guid.NewGuid().ToString();
+    [Parameter] public string Label { get; set; } = "Description";
+    [Parameter] public string Placeholder { get; set; } = "Enter description...";
+    [Parameter] public string HelpText { get; set; } = "";
+    [Parameter] public int Rows { get; set; } = 5;
+    [Parameter] public int MaxLength { get; set; } = 1000;
+    [Parameter] public bool ShowCharacterCount { get; set; } = true;
+    [Parameter] public new EventCallback<string> ValueChanged { get; set; }
+
+    private new string CssClass => EditContext?.FieldCssClass(FieldIdentifier) ?? "";
+    private bool HasError => !string.IsNullOrEmpty(ErrorMessage);
+    private string ErrorMessage => EditContext?.GetValidationMessages(FieldIdentifier).FirstOrDefault() ?? "";
+
+    protected override bool TryParseValueFromString(string? value, out string result, out string validationErrorMessage)
+    {
+        result = value ?? string.Empty;
+        validationErrorMessage = "";
+        return true;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+        
+        if (ValueChanged.HasDelegate)
+        {
+            // Ensure ValueChanged is invoked when CurrentValue changes
+            await ValueChanged.InvokeAsync(CurrentValue);
+        }
+    }
+}
