@@ -1,0 +1,207 @@
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+
+<div class="search-box-container">
+    <div class="search-input-wrapper">
+        <div class="search-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="M21 21l-4.35-4.35"></path>
+            </svg>
+        </div>
+
+        <input type="text"
+               class="search-input"
+               placeholder="@Placeholder"
+               value="@Value"
+               @oninput="OnInputChanged"
+               @onkeydown="OnKeyDown"
+               @onfocus="HandleFocus"
+               @onblur="HandleBlur"
+               disabled="@Disabled" />
+
+        @if (ShowClearButton && !string.IsNullOrEmpty(Value))
+        {
+            <button class="search-clear-btn" @onclick="ClearSearch" type="button">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        }
+
+        @if (IsLoading)
+        {
+            <div class="search-loading">
+                <div class="loading-spinner">
+                    <div class="spinner-dot"></div>
+                    <div class="spinner-dot"></div>
+                    <div class="spinner-dot"></div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (ShowSuggestions && Suggestions.Any() && HasFocus)
+    {
+        <div class="search-suggestions">
+            @foreach (var suggestion in Suggestions)
+            {
+                <div class="search-suggestion @(suggestion == HighlightedSuggestion ? "highlighted" : "")"
+                     @onclick="() => SelectSuggestion(suggestion)"
+                     @onmouseenter="() => HighlightSuggestion(suggestion)">
+                    @if (SuggestionTemplate != null)
+                    {
+                        @SuggestionTemplate(suggestion)
+                    }
+                    else
+                    {
+                        <span>@suggestion</span>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Search...";
+    [Parameter] public bool Disabled { get; set; } = false;
+    [Parameter] public bool ShowClearButton { get; set; } = true;
+    [Parameter] public bool ShowSuggestions { get; set; } = true;
+    [Parameter] public int DebounceMilliseconds { get; set; } = 300;
+    [Parameter] public EventCallback<string> OnSearch { get; set; }
+    [Parameter] public EventCallback OnFocus { get; set; }
+    [Parameter] public EventCallback OnBlur { get; set; }
+    [Parameter] public bool IsLoading { get; set; } = false;
+    [Parameter] public List<string> Suggestions { get; set; } = new();
+    [Parameter] public RenderFragment<string>? SuggestionTemplate { get; set; }
+    [Parameter] public EventCallback<string> OnSuggestionSelected { get; set; }
+
+    private bool HasFocus { get; set; } = false;
+    private string HighlightedSuggestion { get; set; } = "";
+    private System.Timers.Timer? DebounceTimer;
+
+    protected override void OnInitialized()
+    {
+        DebounceTimer = new System.Timers.Timer(DebounceMilliseconds);
+        DebounceTimer.Elapsed += async (sender, e) => await InvokeAsync(PerformSearch);
+        DebounceTimer.AutoReset = false;
+    }
+
+    private async Task OnInputChanged(ChangeEventArgs e)
+    {
+        Value = e.Value?.ToString() ?? "";
+        await ValueChanged.InvokeAsync(Value);
+
+        if (DebounceTimer != null)
+        {
+            DebounceTimer.Stop();
+            DebounceTimer.Start();
+        }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Enter":
+                await PerformSearch();
+                break;
+            case "Escape":
+                HasFocus = false;
+                await OnBlur.InvokeAsync();
+                break;
+            case "ArrowDown":
+                HighlightNextSuggestion();
+                break;
+            case "ArrowUp":
+                HighlightPreviousSuggestion();
+                break;
+        }
+    }
+
+    private async Task HandleFocus(FocusEventArgs e)
+    {
+        HasFocus = true;
+        await OnFocus.InvokeAsync();
+    }
+
+    private async Task HandleBlur(FocusEventArgs e)
+    {
+        // Delay to allow clicking on suggestions
+        await Task.Delay(150);
+        HasFocus = false;
+        await OnBlur.InvokeAsync();
+    }
+
+    private async Task PerformSearch()
+    {
+        if (DebounceTimer != null)
+        {
+            DebounceTimer.Stop();
+        }
+
+        await OnSearch.InvokeAsync(Value);
+    }
+
+    private async Task ClearSearch()
+    {
+        Value = "";
+        await ValueChanged.InvokeAsync(Value);
+        await PerformSearch();
+    }
+
+    private void HighlightNextSuggestion()
+    {
+        if (!Suggestions.Any()) return;
+
+        int currentIndex = Suggestions.IndexOf(HighlightedSuggestion);
+        if (currentIndex < 0 || currentIndex >= Suggestions.Count - 1)
+        {
+            HighlightedSuggestion = Suggestions.First();
+        }
+        else
+        {
+            HighlightedSuggestion = Suggestions[currentIndex + 1];
+        }
+    }
+
+    private void HighlightPreviousSuggestion()
+    {
+        if (!Suggestions.Any()) return;
+
+        int currentIndex = Suggestions.IndexOf(HighlightedSuggestion);
+        if (currentIndex <= 0)
+        {
+            HighlightedSuggestion = Suggestions.Last();
+        }
+        else
+        {
+            HighlightedSuggestion = Suggestions[currentIndex - 1];
+        }
+    }
+
+    private async Task SelectSuggestion(string suggestion)
+    {
+        Value = suggestion;
+        await ValueChanged.InvokeAsync(Value);
+        await OnSuggestionSelected.InvokeAsync(suggestion);
+        await PerformSearch();
+        HasFocus = false;
+    }
+
+    private void HighlightSuggestion(string suggestion)
+    {
+        HighlightedSuggestion = suggestion;
+    }
+
+    public void Dispose()
+    {
+        DebounceTimer?.Dispose();
+    }
+}
+

@@ -1,0 +1,55 @@
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="loading-spinner-container @(IsVisible ? "visible" : "") @(IsOverlay ? "overlay" : "")">
+    <div class="loading-spinner @(Size.ToString().ToLower()) @(Variant.ToString().ToLower())">
+        @if (Variant == SpinnerVariant.Spinner)
+        {
+            <svg class="spinner" width="40" height="40" viewBox="0 0 50 50">
+                <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="4"></circle>
+            </svg>
+        }
+        else if (Variant == SpinnerVariant.ProgressBar)
+        {
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: @(Progress)%;"></div>
+            </div>
+        }
+        else if (Variant == SpinnerVariant.Dots)
+        {
+            <div class="dots-spinner">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Message))
+        {
+            <div class="loading-message">@Message</div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool IsVisible { get; set; } = true;
+    [Parameter] public SpinnerSize Size { get; set; } = SpinnerSize.Medium;
+    [Parameter] public SpinnerVariant Variant { get; set; } = SpinnerVariant.Spinner;
+    [Parameter] public bool IsOverlay { get; set; } = false;
+    [Parameter] public string Message { get; set; } = "";
+    [Parameter] public int Progress { get; set; } = 0; // For progress bar variant (0-100)
+
+    public enum SpinnerSize
+    {
+        Small,
+        Medium,
+        Large
+    }
+
+    public enum SpinnerVariant
+    {
+        Spinner,
+        ProgressBar,
+        Dots
+    }
+}
+

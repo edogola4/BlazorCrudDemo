@@ -12,8 +12,15 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h1 class="h3 mb-0 text-gray-800">Products</h1>
-                    <p class="text-muted">Manage your product inventory</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="me-3">
+                            <i class="bi bi-box-seam text-primary" style="font-size: 2.5rem;"></i>
+                        </div>
+                        <div>
+                            <h1 class="h3 mb-0 text-gray-800">Products</h1>
+                            <p class="text-muted">Manage your product inventory</p>
+                        </div>
+                    </div>
                 </div>
                 <button class="btn btn-primary" @onclick="NavigateToCreate">
                     <i class="fas fa-plus me-2"></i>Add New Product
@@ -26,6 +33,11 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="bi bi-funnel me-2"></i>Filters & Search
+                    </h6>
+                </div>
                 <div class="card-body">
                     <div class="row g-3">
                         <!-- Search Bar -->

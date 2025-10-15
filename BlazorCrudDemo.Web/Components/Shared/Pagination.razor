@@ -1,0 +1,170 @@
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="pagination-container">
+    <!-- Items per page selector and total count -->
+    <div class="pagination-info">
+        <div class="items-per-page">
+            <label for="items-per-page">Show:</label>
+            <select id="items-per-page" value="@PageSize" @onchange="HandlePageSizeChanged">
+                @foreach (var size in PageSizeOptions)
+                {
+                    <option value="@size">@size</option>
+                }
+            </select>
+        </div>
+        <div class="total-count">
+            Showing @(StartItem) to @(EndItem) of @TotalItems items
+        </div>
+    </div>
+
+    <!-- Pagination controls -->
+    <div class="pagination-controls">
+        <!-- Previous button -->
+        <button class="pagination-btn pagination-prev"
+                disabled="@(CurrentPage <= 1)"
+                @onclick="GoToPrevious">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15,18 9,12 15,6"></polyline>
+            </svg>
+            Previous
+        </button>
+
+        <!-- Page numbers -->
+        <div class="pagination-pages">
+            @if (ShowFirstPage && CurrentPage > 3)
+            {
+                <button class="pagination-btn pagination-page" @onclick="() => GoToPage(1)">1</button>
+                @if (CurrentPage > 4)
+                {
+                    <span class="pagination-ellipsis">...</span>
+                }
+            }
+
+            @for (int i = Math.Max(1, CurrentPage - 2); i <= Math.Min(TotalPages, CurrentPage + 2); i++)
+            {
+                <button class="pagination-btn pagination-page @(i == CurrentPage ? "active" : "")"
+                        @onclick="() => GoToPage(i)">
+                    @i
+                </button>
+            }
+
+            @if (ShowLastPage && CurrentPage < TotalPages - 2)
+            {
+                @if (CurrentPage < TotalPages - 3)
+                {
+                    <span class="pagination-ellipsis">...</span>
+                }
+                <button class="pagination-btn pagination-page" @onclick="() => GoToPage(TotalPages)">@TotalPages</button>
+            }
+        </div>
+
+        <!-- Next button -->
+        <button class="pagination-btn pagination-next"
+                disabled="@(CurrentPage >= TotalPages)"
+                @onclick="GoToNext">
+            Next
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9,18 15,12 9,6"></polyline>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Jump to page -->
+    <div class="pagination-jump">
+        <label for="jump-to-page">Go to page:</label>
+        <input id="jump-to-page"
+               type="number"
+               min="1"
+               max="@TotalPages"
+               value="@CurrentPage"
+               @onkeydown="OnJumpKeyDown"
+               @oninput="OnJumpInput" />
+        <button class="pagination-btn pagination-jump-btn" @onclick="JumpToPage" disabled="@(JumpPage == CurrentPage || JumpPage < 1 || JumpPage > TotalPages)">
+            Go
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int PageSize { get; set; } = 10;
+    [Parameter] public int TotalItems { get; set; } = 0;
+    [Parameter] public int[] PageSizeOptions { get; set; } = new[] { 5, 10, 25, 50, 100 };
+    [Parameter] public EventCallback<int> OnPageChanged { get; set; }
+    [Parameter] public EventCallback<int> OnPageSizeChanged { get; set; }
+
+    private int JumpPage { get; set; }
+    private bool ShowFirstPage => TotalPages > 5;
+    private bool ShowLastPage => TotalPages > 5;
+
+    public int TotalPages => (int)Math.Ceiling((double)TotalItems / PageSize);
+    public int StartItem => TotalItems == 0 ? 0 : ((CurrentPage - 1) * PageSize) + 1;
+    public int EndItem => Math.Min(CurrentPage * PageSize, TotalItems);
+
+    protected override void OnParametersSet()
+    {
+        JumpPage = CurrentPage;
+    }
+
+    private async Task GoToPage(int page)
+    {
+        if (page != CurrentPage && page >= 1 && page <= TotalPages)
+        {
+            CurrentPage = page;
+            JumpPage = page;
+            await OnPageChanged.InvokeAsync(page);
+        }
+    }
+
+    private async Task GoToPrevious()
+    {
+        if (CurrentPage > 1)
+        {
+            await GoToPage(CurrentPage - 1);
+        }
+    }
+
+    private async Task GoToNext()
+    {
+        if (CurrentPage < TotalPages)
+        {
+            await GoToPage(CurrentPage + 1);
+        }
+    }
+
+    private async Task HandlePageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int newSize) && newSize != PageSize)
+        {
+            PageSize = newSize;
+            CurrentPage = 1; // Reset to first page
+            await OnPageSizeChanged.InvokeAsync(newSize);
+            await OnPageChanged.InvokeAsync(1);
+        }
+    }
+
+    private void OnJumpInput(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int page))
+        {
+            JumpPage = page;
+        }
+    }
+
+    private async Task OnJumpKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await JumpToPage();
+        }
+    }
+
+    private async Task JumpToPage()
+    {
+        if (JumpPage >= 1 && JumpPage <= TotalPages && JumpPage != CurrentPage)
+        {
+            await GoToPage(JumpPage);
+        }
+    }
+}
+

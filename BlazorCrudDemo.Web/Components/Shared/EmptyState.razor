@@ -1,0 +1,115 @@
+@using Microsoft.AspNetCore.Components.Web
+
+<div class="empty-state @(Variant.ToString().ToLower()) @(Size.ToString().ToLower())">
+    <div class="empty-state-icon">
+        @switch (Variant)
+        {
+            case EmptyStateVariant.NoData:
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"></path>
+                </svg>
+                break;
+            case EmptyStateVariant.NoResults:
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="M21 21l-4.35-4.35"></path>
+                    <line x1="9" y1="9" x2="9" y2="9"></line>
+                </svg>
+                break;
+            case EmptyStateVariant.Error:
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+                break;
+            case EmptyStateVariant.Empty:
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                </svg>
+                break;
+            case EmptyStateVariant.ComingSoon:
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12,6 12,12 16,14"></polyline>
+                </svg>
+                break;
+            case EmptyStateVariant.Maintenance:
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                </svg>
+                break;
+        }
+    </div>
+
+    <div class="empty-state-content">
+        <h3 class="empty-state-title">@Title</h3>
+        <p class="empty-state-description">@Description</p>
+
+        @if (ShowAction && !string.IsNullOrEmpty(ActionText))
+        {
+            <button class="empty-state-action @(Variant.ToString().ToLower())"
+                    @onclick="OnActionClick">
+                @if (!string.IsNullOrEmpty(ActionIcon))
+                {
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        @switch (ActionIcon)
+                        {
+                            case "plus":
+                                <path d="M12 5v14M5 12h14"></path>
+                                break;
+                            case "refresh":
+                                <polyline points="23,4 23,10 17,10"></polyline>
+                                <polyline points="1,20 1,14 7,14"></polyline>
+                                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                                break;
+                            case "search":
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="M21 21l-4.35-4.35"></path>
+                                break;
+                            case "arrow-right":
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12,5 19,12 12,19"></polyline>
+                                break;
+                        }
+                    </svg>
+                }
+                @ActionText
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "No data available";
+    [Parameter] public string Description { get; set; } = "There are no items to display at the moment.";
+    [Parameter] public EmptyStateVariant Variant { get; set; } = EmptyStateVariant.NoData;
+    [Parameter] public EmptyStateSize Size { get; set; } = EmptyStateSize.Medium;
+    [Parameter] public bool ShowAction { get; set; } = false;
+    [Parameter] public string ActionText { get; set; } = "";
+    [Parameter] public string ActionIcon { get; set; } = ""; // plus, refresh, search, arrow-right
+    [Parameter] public EventCallback OnAction { get; set; }
+
+    private async Task OnActionClick()
+    {
+        await OnAction.InvokeAsync();
+    }
+
+    public enum EmptyStateVariant
+    {
+        NoData,
+        NoResults,
+        Error,
+        Empty,
+        ComingSoon,
+        Maintenance
+    }
+
+    public enum EmptyStateSize
+    {
+        Small,
+        Medium,
+        Large
+    }
+}
+

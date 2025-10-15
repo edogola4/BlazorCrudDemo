@@ -1,0 +1,333 @@
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@typeparam TItem
+
+<div class="data-table-container">
+    <!-- Table actions -->
+    @if (ShowToolbar)
+    {
+        <div class="data-table-toolbar">
+            @if (ShowSelection && SelectedItems.Any())
+            {
+                <div class="selection-info">
+                    <span>@SelectedItems.Count item@(SelectedItems.Count == 1 ? "" : "s") selected</span>
+                    <button class="btn btn-sm btn-outline" @onclick="ClearSelection">Clear</button>
+                </div>
+            }
+
+            <div class="table-actions">
+                @if (ShowExportButton)
+                {
+                    <button class="btn btn-sm btn-outline" @onclick="ExportToCsv">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7,10 12,15 17,10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Export CSV
+                    </button>
+                }
+
+                @if (ShowSearch)
+                {
+                    <div class="table-search">
+                        <input type="text"
+                               placeholder="Search table..."
+                               value="@SearchTerm"
+                               @oninput="OnSearchChanged"
+                               class="form-control form-control-sm" />
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Table wrapper with responsive scroll -->
+    <div class="table-wrapper @(Responsive ? "responsive" : "")">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    @if (ShowSelection)
+                    {
+                        <th class="selection-column">
+                            <input type="checkbox"
+                                   @onchange="OnSelectAllChanged"
+                                   checked="@(Items.Any() && SelectedItems.Count == Items.Count)"
+                                   indeterminate="@(SelectedItems.Any() && SelectedItems.Count < Items.Count)" />
+                        </th>
+                    }
+
+                    @foreach (var column in Columns)
+                    {
+                        <th class="@(column.Sortable ? "sortable" : "") @(column.CssClass)"
+                            style="@column.Style"
+                            @onclick="@(column.Sortable ? () => SortBy(column) : () => Task.CompletedTask)">
+                            <div class="th-content">
+                                <span>@column.Header</span>
+                                @if (column.Sortable)
+                                {
+                                    @if (SortColumn == column.PropertyName)
+                                    {
+                                        <svg class="sort-icon @(CurrentSortDirection == SortDirection.Ascending ? "asc" : "desc")" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="@(CurrentSortDirection == SortDirection.Ascending ? "18,15 12,9 6,15" : "6,9 12,15 18,9")"></polyline>
+                                        </svg>
+                                    }
+                                    else
+                                    {
+                                        <svg class="sort-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="6,9 12,15 18,9"></polyline>
+                                        </svg>
+                                    }
+                                }
+                            </div>
+                        </th>
+                    }
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (Items.Any())
+                {
+                    @foreach (var item in Items)
+                    {
+                        <tr class="@(SelectedItems.Contains(item) ? "selected" : "")"
+                            @onclick="() => HandleRowClick(item)"
+                            @ondblclick="() => HandleRowDoubleClick(item)">
+                            @if (ShowSelection)
+                            {
+                                <td class="selection-column">
+                                    <input type="checkbox"
+                                           @onchange="() => OnItemSelectionChanged(item)"
+                                           checked="@SelectedItems.Contains(item)" />
+                                </td>
+                            }
+
+                            @foreach (var column in Columns)
+                            {
+                                <td class="@column.CssClass" style="@column.Style">
+                                    @if (column.Template != null)
+                                    {
+                                        @column.Template(item)
+                                    }
+                                    else
+                                    {
+                                        @GetCellValue(item, column.PropertyName)
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="@(Columns.Count + (ShowSelection ? 1 : 0))" class="no-data">
+                            @if (EmptyTemplate != null)
+                            {
+                                @EmptyTemplate
+                            }
+                            else
+                            {
+                                <span>No data available</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Table footer with pagination -->
+    @if (ShowPagination && TotalItems > 0)
+    {
+        <div class="table-footer">
+            <div class="table-info">
+                Showing @(StartIndex + 1) to @(Math.Min(StartIndex + PageSize, TotalItems)) of @TotalItems entries
+            </div>
+
+            @if (PaginationTemplate != null)
+            {
+                @PaginationTemplate
+            }
+            else
+            {
+                <!-- Default pagination would go here -->
+                <div class="pagination-simple">
+                    <button @onclick="PreviousPage" disabled="@(CurrentPage <= 1)">Previous</button>
+                    <span>Page @CurrentPage of @TotalPages</span>
+                    <button @onclick="NextPage" disabled="@(CurrentPage >= TotalPages)">Next</button>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<TItem> Items { get; set; } = new();
+    [Parameter] public List<DataColumn<TItem>> Columns { get; set; } = new();
+    [Parameter] public bool ShowSelection { get; set; } = false;
+    [Parameter] public bool ShowToolbar { get; set; } = true;
+    [Parameter] public bool ShowSearch { get; set; } = true;
+    [Parameter] public bool ShowExportButton { get; set; } = true;
+    [Parameter] public bool ShowPagination { get; set; } = true;
+    [Parameter] public bool Responsive { get; set; } = true;
+    [Parameter] public RenderFragment? EmptyTemplate { get; set; }
+    [Parameter] public RenderFragment? PaginationTemplate { get; set; }
+    [Parameter] public EventCallback<List<TItem>> OnSelectionChanged { get; set; }
+    [Parameter] public EventCallback<TItem> OnRowClick { get; set; }
+    [Parameter] public EventCallback<TItem> OnRowDoubleClick { get; set; }
+
+    // Pagination properties
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int PageSize { get; set; } = 10;
+    [Parameter] public int TotalItems { get; set; } = 0;
+
+    public List<TItem> SelectedItems { get; set; } = new();
+    public string SortColumn { get; set; } = "";
+    public SortDirection CurrentSortDirection { get; set; } = SortDirection.Ascending;
+    public string SearchTerm { get; set; } = "";
+
+    public int TotalPages => (int)Math.Ceiling((double)TotalItems / PageSize);
+    public int StartIndex => (CurrentPage - 1) * PageSize;
+
+    private async Task OnSelectAllChanged(ChangeEventArgs e)
+    {
+        if ((bool)e.Value!)
+        {
+            SelectedItems = new List<TItem>(Items);
+        }
+        else
+        {
+            SelectedItems.Clear();
+        }
+        await OnSelectionChanged.InvokeAsync(SelectedItems);
+    }
+
+    private async Task OnItemSelectionChanged(TItem item)
+    {
+        if (SelectedItems.Contains(item))
+        {
+            SelectedItems.Remove(item);
+        }
+        else
+        {
+            SelectedItems.Add(item);
+        }
+        await OnSelectionChanged.InvokeAsync(SelectedItems);
+    }
+
+    private async Task HandleRowClick(TItem item)
+    {
+        await OnRowClick.InvokeAsync(item);
+    }
+
+    private async Task HandleRowDoubleClick(TItem item)
+    {
+        await OnRowDoubleClick.InvokeAsync(item);
+    }
+
+    private async Task ClearSelection()
+    {
+        SelectedItems.Clear();
+        await OnSelectionChanged.InvokeAsync(SelectedItems);
+    }
+
+    private async Task OnSearchChanged(ChangeEventArgs e)
+    {
+        SearchTerm = e.Value?.ToString() ?? "";
+        CurrentPage = 1; // Reset to first page when searching
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SortBy(DataColumn<TItem> column)
+    {
+        if (!column.Sortable) return;
+
+        if (SortColumn == column.PropertyName)
+        {
+            CurrentSortDirection = CurrentSortDirection == SortDirection.Ascending
+                ? SortDirection.Descending
+                : SortDirection.Ascending;
+        }
+        else
+        {
+            SortColumn = column.PropertyName;
+            CurrentSortDirection = SortDirection.Ascending;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ExportToCsv()
+    {
+        var csv = GenerateCsv();
+        var fileName = $"export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+
+        await JSRuntime.InvokeVoidAsync("downloadFile",
+            new { content = csv, filename = fileName, mimeType = "text/csv" });
+    }
+
+    private string GenerateCsv()
+    {
+        var sb = new System.Text.StringBuilder();
+
+        // Header
+        var headers = Columns.Select(c => c.Header).ToList();
+        if (ShowSelection) headers.Insert(0, "Selected");
+        sb.AppendLine(string.Join(",", headers.Select(h => $"\"{h}\"")));
+
+        // Data
+        foreach (var item in Items)
+        {
+            var values = Columns.Select(c => GetCellValue(item, c.PropertyName)).ToList();
+            if (ShowSelection) values.Insert(0, SelectedItems.Contains(item) ? "Yes" : "No");
+            sb.AppendLine(string.Join(",", values.Select(v => $"\"{v}\"")));
+        }
+
+        return sb.ToString();
+    }
+
+    private object? GetCellValue(TItem item, string propertyName)
+    {
+        var property = typeof(TItem).GetProperty(propertyName);
+        return property?.GetValue(item);
+    }
+
+    private async Task PreviousPage()
+    {
+        if (CurrentPage > 1)
+        {
+            CurrentPage--;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (CurrentPage < TotalPages)
+        {
+            CurrentPage++;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+}
+
+@code {
+    public class DataColumn<T>
+    {
+        public string Header { get; set; } = "";
+        public string PropertyName { get; set; } = "";
+        public bool Sortable { get; set; } = true;
+        public string CssClass { get; set; } = "";
+        public string Style { get; set; } = "";
+        public RenderFragment<T>? Template { get; set; }
+    }
+
+    public enum SortDirection
+    {
+        Ascending,
+        Descending
+    }
+}
+
