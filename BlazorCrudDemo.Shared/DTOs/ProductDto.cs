@@ -16,7 +16,7 @@ public class ProductDto : INotifyPropertyChanged
     private string? _sku;
     private string? _imageUrl;
     private int _categoryId;
-    private string? _categoryName;
+    private Category? _category;
     private DateTime _createdDate;
     private DateTime _modifiedDate;
     private bool _isActive;
@@ -105,6 +105,31 @@ public class ProductDto : INotifyPropertyChanged
     }
 
     /// <summary>
+    /// Stock quantity of the product (alias for Stock).
+    /// </summary>
+    public int StockQuantity => Stock;
+
+    /// <summary>
+    /// Original price of the product before any discounts.
+    /// </summary>
+    public decimal OriginalPrice { get; set; } = 0;
+
+    /// <summary>
+    /// Tags associated with the product.
+    /// </summary>
+    public List<string>? Tags { get; set; }
+
+    /// <summary>
+    /// Average rating of the product (1-5).
+    /// </summary>
+    public decimal Rating { get; set; } = 0;
+
+    /// <summary>
+    /// Number of reviews for the product.
+    /// </summary>
+    public int ReviewCount { get; set; } = 0;
+
+    /// <summary>
     /// Stock Keeping Unit (SKU) for the product.
     /// </summary>
     public string? SKU
@@ -153,20 +178,26 @@ public class ProductDto : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Name of the category this product belongs to.
+    /// Category this product belongs to.
     /// </summary>
-    public string? CategoryName
+    public Category? Category
     {
-        get => _categoryName;
+        get => _category;
         set
         {
-            if (_categoryName != value)
+            if (_category != value)
             {
-                _categoryName = value;
+                _category = value;
+                OnPropertyChanged(nameof(Category));
                 OnPropertyChanged(nameof(CategoryName));
             }
         }
     }
+
+    /// <summary>
+    /// Name of the category this product belongs to.
+    /// </summary>
+    public string? CategoryName => Category?.Name;
 
     /// <summary>
     /// Date and time when the product was created.
@@ -274,10 +305,14 @@ public class ProductDto : INotifyPropertyChanged
             SKU = product.SKU,
             ImageUrl = product.ImageUrl,
             CategoryId = product.CategoryId,
-            CategoryName = product.Category?.Name,
+            Category = product.Category,
             CreatedDate = product.CreatedDate,
             ModifiedDate = product.ModifiedDate,
-            IsActive = product.IsActive
+            IsActive = product.IsActive,
+            OriginalPrice = product.OriginalPrice,
+            Tags = product.Tags?.ToList(),
+            Rating = product.Rating,
+            ReviewCount = product.ReviewCount
         };
     }
 }

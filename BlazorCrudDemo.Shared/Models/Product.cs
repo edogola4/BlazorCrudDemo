@@ -91,6 +91,36 @@ public class Product : BaseEntity
     }
 
     /// <summary>
+    /// Stock quantity of the product (alias for Stock).
+    /// </summary>
+    [NotMapped]
+    public int StockQuantity => Stock;
+
+    /// <summary>
+    /// Original price of the product before any discounts.
+    /// </summary>
+    [Range(0.01, 999999.99, ErrorMessage = "Original price must be between 0.01 and 999999.99")]
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal OriginalPrice { get; set; } = 0;
+
+    /// <summary>
+    /// Tags associated with the product.
+    /// </summary>
+    public List<string>? Tags { get; set; }
+
+    /// <summary>
+    /// Average rating of the product (1-5).
+    /// </summary>
+    [Range(0, 5, ErrorMessage = "Rating must be between 0 and 5")]
+    public decimal Rating { get; set; } = 0;
+
+    /// <summary>
+    /// Number of reviews for the product.
+    /// </summary>
+    [Range(0, int.MaxValue, ErrorMessage = "Review count cannot be negative")]
+    public int ReviewCount { get; set; } = 0;
+
+    /// <summary>
     /// Stock Keeping Unit (SKU) for the product.
     /// </summary>
     [Required(ErrorMessage = "SKU is required")]
@@ -160,6 +190,12 @@ public class Product : BaseEntity
             }
         }
     }
+
+    /// <summary>
+    /// Gets the category name for display purposes.
+    /// </summary>
+    [NotMapped]
+    public string? CategoryName => Category?.Name;
 
     /// <summary>
     /// Gets a value indicating whether the product is in stock.
