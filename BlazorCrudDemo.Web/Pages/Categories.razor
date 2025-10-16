@@ -402,11 +402,7 @@
     }
     private async Task ShowCreateModal()
     {
-        EditingCategory = new CategoryDto
-        {
-            DisplayOrder = CategoryList.Any() ? CategoryList.Max(c => c.DisplayOrder) + 1 : 1,
-            IsActive = true
-        };
+        EditingCategory = null; // Clear any existing category for create mode
         ShowFormModal = true;
         await CategoryFormRef?.InitializeForCreate();
     }

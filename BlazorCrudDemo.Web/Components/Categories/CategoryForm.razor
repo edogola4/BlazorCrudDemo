@@ -1,9 +1,8 @@
-@using BlazorCrudDemo.Shared.DTOs
-@using BlazorCrudDemo.Web.Services
+@inject BlazorCrudDemo.Web.Services.ICategoryService CategoryService
+
 @using Microsoft.AspNetCore.Components.Forms
+@using BlazorCrudDemo.Shared.DTOs
 @using System.ComponentModel.DataAnnotations
-@using System.Linq
-@inject ICategoryService CategoryService
 
 @if (Show)
 {
@@ -18,7 +17,7 @@
                     <button type="button" class="btn-close" @onclick="Cancel"></button>
                 </div>
 
-                <EditForm Model="FormModel" OnValidSubmit="HandleSubmit" class="needs-validation">
+                <EditForm EditContext="EditContext" OnValidSubmit="HandleSubmit" class="needs-validation">
                     <div class="modal-body">
                         <!-- Basic Information Section -->
                         <div class="row mb-4">
@@ -162,6 +161,7 @@
     [Parameter] public EventCallback OnCancel { get; set; }
 
     private CategoryFormModel FormModel { get; set; } = new();
+    private EditContext EditContext { get; set; } = new(new());
     private bool IsEdit => Category != null;
     private bool IsSubmitting { get; set; }
 
@@ -183,16 +183,28 @@
 
     protected override void OnParametersSet()
     {
-        if (Category != null && Show)
+        if (Show)
         {
-            FormModel = new CategoryFormModel
+            if (Category != null)
             {
-                Name = Category.Name ?? "",
-                Description = Category.Description,
-                Icon = Category.Icon,
-                DisplayOrder = Category.DisplayOrder,
-                IsActive = Category.IsActive
-            };
+                // Editing existing category
+                FormModel = new CategoryFormModel
+                {
+                    Name = Category.Name ?? "",
+                    Description = Category.Description,
+                    Icon = Category.Icon,
+                    DisplayOrder = Category.DisplayOrder,
+                    IsActive = Category.IsActive
+                };
+            }
+            else
+            {
+                // Creating new category - reset form
+                FormModel = new CategoryFormModel();
+            }
+
+            // Create new EditContext with the updated model
+            EditContext = new EditContext(FormModel);
         }
     }
 
@@ -309,17 +321,17 @@
 
     private class CategoryFormModel
     {
-        [Required(ErrorMessage = "Category name is required")]
-        [StringLength(100, ErrorMessage = "Category name cannot exceed 100 characters")]
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Category name is required")]
+        [System.ComponentModel.DataAnnotations.StringLength(100, ErrorMessage = "Category name cannot exceed 100 characters")]
         public string Name { get; set; } = "";
 
-        [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
+        [System.ComponentModel.DataAnnotations.StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
         public string? Description { get; set; }
 
         public string? Icon { get; set; }
 
-        [Required(ErrorMessage = "Display order is required")]
-        [Range(0, int.MaxValue, ErrorMessage = "Display order must be a non-negative number")]
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Display order is required")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue, ErrorMessage = "Display order must be a non-negative number")]
         public int DisplayOrder { get; set; }
 
         public bool IsActive { get; set; } = true;
