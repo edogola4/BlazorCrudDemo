@@ -85,7 +85,7 @@ public interface ICategoryService
     /// </summary>
     /// <param name="categoryDto">The category data to validate.</param>
     /// <returns>Validation result with any errors.</returns>
-    Task<ValidationResult> ValidateCategoryAsync(CategoryDto categoryDto);
+    Task<ValidationResult> ValidateCategoryAsync(object categoryDto);
 
     /// <summary>
     /// Gets category statistics.
