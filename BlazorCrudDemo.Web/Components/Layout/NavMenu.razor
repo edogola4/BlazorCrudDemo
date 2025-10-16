@@ -47,6 +47,27 @@
             </NavLink>
         </div>
 
+        <!-- Search -->
+        <div class="nav-item @(IsActive("/products/search") ? "active" : "")" @onclick="() => NavigateToSearch()">
+            <NavLink href="products/search" class="nav-link">
+                <div class="nav-icon-wrapper">
+                    <i class="bi bi-search nav-icon"></i>
+                    @if (!IsCollapsed)
+                    {
+                        <span class="nav-text">Search</span>
+                    }
+                    else
+                    {
+                        <span class="nav-tooltip">Search</span>
+                    }
+                </div>
+                @if (IsActive("/products/search"))
+                {
+                    <div class="nav-indicator"></div>
+                }
+            </NavLink>
+        </div>
+
         <!-- Products -->
         <div class="nav-item @(IsActive("/products") ? "active" : "")" @onclick="() => NavigateToProducts()">
             <NavLink href="products" class="nav-link">
@@ -197,6 +218,9 @@
 
     private string GetPageTitle(string url)
     {
+        if (url == "/products/search" || url.StartsWith("/products/search"))
+            return "Search Products";
+
         return url switch
         {
             "/" => "Dashboard",
@@ -209,6 +233,9 @@
 
     private string GetPageIcon(string url)
     {
+        if (url == "/products/search" || url.StartsWith("/products/search"))
+            return "bi-search";
+
         return url switch
         {
             "/" => "bi-house-door-fill",
@@ -222,13 +249,16 @@
     private bool IsActive(string href)
     {
         var currentUrl = new Uri(Navigation.Uri).AbsolutePath;
-        return currentUrl == href || (href == "/" && currentUrl == "/");
+        if (href == "/" && currentUrl == "/") return true;
+        if (href == "/products/search" && currentUrl.StartsWith("/products/search")) return true;
+        return currentUrl == href;
     }
 
     private void NavigateToHome() => Navigation.NavigateTo("/");
     private void NavigateToCounter() => Navigation.NavigateTo("/counter");
     private void NavigateToProducts() => Navigation.NavigateTo("/products");
     private void NavigateToCategories() => Navigation.NavigateTo("/categories");
+    private void NavigateToSearch() => Navigation.NavigateTo("/products/search");
     private void NavigateToPage(string url) => Navigation.NavigateTo(url);
 
     public void Dispose()
