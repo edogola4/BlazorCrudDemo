@@ -172,7 +172,7 @@ If you encounter any issues or have questions, please [open an issue](https://gi
 ---
 
 <div align="center">
-  Made with ❤️ by [Bran Don]
+  Made with ❤️ by Bran Don
   <br>
   <a href="https://twitter.com/intent/tweet?text=Check%20out%20this%20awesome%20Blazor%20CRUD%20demo!&url=https%3A%2F%2Fgithub.com%2Fedogola4%2FBlazorCrudDemo">
     <img src="https://img.shields.io/badge/Share_on_X-000000?style=for-the-badge&logo=x&logoColor=white" alt="Share on X">
