@@ -41,9 +41,17 @@
         <div class="quick-actions">
             <button class="action-btn" @onclick="HandleQuickAction" title="Quick Action">
                 <i class="bi bi-lightning-charge"></i>
+                @if (!IsMobile)
+                {
+                    <span>Quick</span>
+                }
             </button>
             <button class="action-btn" @onclick="HandleNewItem" title="New Item">
                 <i class="bi bi-plus-circle"></i>
+                @if (!IsMobile)
+                {
+                    <span>New</span>
+                }
             </button>
         </div>
 
@@ -119,6 +127,7 @@
 </div>
 
 @code {
+    [Parameter] public bool IsMobile { get; set; }
     [Parameter] public bool IsDarkMode { get; set; }
     [Parameter] public int NotificationCount { get; set; }
     [Parameter] public EventCallback<bool> IsDarkModeChanged { get; set; }
