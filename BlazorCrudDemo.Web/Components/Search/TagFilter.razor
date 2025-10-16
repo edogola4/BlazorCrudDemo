@@ -1,0 +1,267 @@
+@using System.Linq
+
+<div class="tag-filter mb-4">
+    <label class="form-label">@Label</label>
+    
+    <div class="tag-input-container">
+        <div class="tag-list">
+            @foreach (var tag in SelectedTags)
+            {
+                <div class="tag-badge">
+                    <span>@tag</span>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => RemoveTag(tag)" 
+                            aria-label="Remove tag"></button>
+                </div>
+            }
+            
+            <input type="text" 
+                   class="tag-input" 
+                   placeholder="@(SelectedTags.Any() ? "" : Placeholder)" 
+                   @bind="_inputValue"
+                   @onkeydown="HandleKeyDown"
+                   @oninput="HandleInput"
+                   @onfocus="() => ShowSuggestions = true"
+                   @onblur="OnInputBlur" />
+        </div>
+        
+        @if (ShowSuggestions && _suggestions.Any())
+        {
+            <div class="suggestions-dropdown">
+                @foreach (var suggestion in _suggestions)
+                {
+                    <div class="suggestion-item" @onmousedown="() => AddTag(suggestion)">
+                        @suggestion
+                    </div>
+                }
+                
+                @if (!string.IsNullOrWhiteSpace(_inputValue) && 
+                     !_suggestions.Contains(_inputValue, StringComparer.OrdinalIgnoreCase) && 
+                     !SelectedTags.Contains(_inputValue, StringComparer.OrdinalIgnoreCase))
+                {
+                    <div class="suggestion-item add-new" @onmousedown="() => AddTag(_inputValue)">
+                        Add "@_inputValue"
+                    </div>
+                }
+            </div>
+        }
+    </div>
+    
+    @if (ShowPopularTags && PopularTags.Any())
+    {
+        <div class="popular-tags mt-2">
+            <small class="text-muted me-2">Popular:</small>
+            @foreach (var tag in PopularTags.Except(SelectedTags, StringComparer.OrdinalIgnoreCase).Take(5))
+            {
+                <a href="#" class="badge bg-light text-dark text-decoration-none me-1 mb-1" 
+                   @onclick:preventDefault 
+                   @onclick="() => AddTag(tag)">
+                    @tag
+                </a>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "Tags";
+    [Parameter] public string Placeholder { get; set; } = "Type and press Enter to add tags";
+    [Parameter] public IReadOnlyList<string> AvailableTags { get; set; } = new List<string>();
+    [Parameter] public IReadOnlyList<string> SelectedTags { get; set; } = new List<string>();
+    [Parameter] public EventCallback<IReadOnlyList<string>> SelectedTagsChanged { get; set; }
+    [Parameter] public bool ShowPopularTags { get; set; } = true;
+    [Parameter] public IReadOnlyList<string> PopularTags { get; set; } = new List<string>();
+    [Parameter] public bool AllowCustomTags { get; set; } = true;
+    [Parameter] public int MaxTags { get; set; } = 10;
+    
+    private string _inputValue = string.Empty;
+    private List<string> _suggestions = new();
+    private bool ShowSuggestions { get; set; }
+    
+    private void HandleInput(ChangeEventArgs e)
+    {
+        _inputValue = e.Value?.ToString() ?? string.Empty;
+        UpdateSuggestions();
+    }
+    
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Enter" when !string.IsNullOrWhiteSpace(_inputValue):
+                AddTag(_inputValue);
+                break;
+                
+            case "Backspace" when string.IsNullOrEmpty(_inputValue) && SelectedTags.Any():
+                RemoveTag(SelectedTags.Last());
+                break;
+        }
+    }
+    
+    private void OnInputBlur()
+    {
+        // Small delay to allow click events to be processed
+        Task.Delay(200).ContinueWith(_ => 
+        {
+            InvokeAsync(() => 
+            {
+                ShowSuggestions = false;
+                StateHasChanged();
+            });
+        });
+    }
+    
+    private async Task AddTag(string tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag) || SelectedTags.Count >= MaxTags) 
+            return;
+            
+        var normalizedTag = tag.Trim();
+        
+        if (!SelectedTags.Contains(normalizedTag, StringComparer.OrdinalIgnoreCase))
+        {
+            var newTags = SelectedTags.ToList();
+            newTags.Add(normalizedTag);
+            await SelectedTagsChanged.InvokeAsync(newTags.AsReadOnly());
+        }
+        
+        _inputValue = string.Empty;
+        ShowSuggestions = false;
+        UpdateSuggestions();
+    }
+    
+    private async Task RemoveTag(string tag)
+    {
+        var newTags = SelectedTags.Where(t => !string.Equals(t, tag, StringComparison.OrdinalIgnoreCase)).ToList();
+        await SelectedTagsChanged.InvokeAsync(newTags.AsReadOnly());
+        UpdateSuggestions();
+    }
+    
+    private void UpdateSuggestions()
+    {
+        if (string.IsNullOrWhiteSpace(_inputValue))
+        {
+            _suggestions = AvailableTags
+                .Except(SelectedTags, StringComparer.OrdinalIgnoreCase)
+                .Take(5)
+                .ToList();
+        }
+        else
+        {
+            _suggestions = AvailableTags
+                .Where(tag => tag.IndexOf(_inputValue, StringComparison.OrdinalIgnoreCase) >= 0)
+                .Except(SelectedTags, StringComparer.OrdinalIgnoreCase)
+                .Take(5)
+                .ToList();
+        }
+        
+        // If we have no suggestions but allow custom tags and have input, show the input as a suggestion
+        if (_suggestions.Count == 0 && AllowCustomTags && !string.IsNullOrWhiteSpace(_inputValue) && 
+            !SelectedTags.Contains(_inputValue, StringComparer.OrdinalIgnoreCase))
+        {
+            _suggestions.Add(_inputValue);
+        }
+    }
+    
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        UpdateSuggestions();
+    }
+}
+
+<style>
+    .tag-filter {
+        position: relative;
+    }
+    
+    .tag-input-container {
+        position: relative;
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+        padding: 0.375rem 0.75rem;
+        min-height: calc(1.5em + 0.75rem + 2px);
+        background-color: #fff;
+    }
+    
+    .tag-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    
+    .tag-badge {
+        display: inline-flex;
+        align-items: center;
+        background-color: #0d6efd;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+        line-height: 1.5;
+    }
+    
+    .tag-badge .btn-close {
+        margin-left: 0.5rem;
+        font-size: 0.75rem;
+        opacity: 0.8;
+    }
+    
+    .tag-badge .btn-close:hover {
+        opacity: 1;
+        color: white;
+    }
+    
+    .tag-input {
+        flex: 1;
+        min-width: 120px;
+        border: none;
+        outline: none;
+        background: transparent;
+        padding: 0.25rem 0;
+    }
+    
+    .suggestions-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        margin-top: 0.25rem;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    
+    .suggestion-item {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+    }
+    
+    .suggestion-item:hover, .suggestion-item:focus {
+        background-color: #f8f9fa;
+    }
+    
+    .suggestion-item.add-new {
+        color: #0d6efd;
+        font-style: italic;
+    }
+    
+    .popular-tags {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    
+    .popular-tags .badge {
+        font-weight: normal;
+        padding: 0.35em 0.65em;
+    }
+    
+    .popular-tags .badge:hover {
+        background-color: #e9ecef !important;
+    }
+</style>

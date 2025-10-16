@@ -1,0 +1,257 @@
+@using System.Globalization
+
+<div class="product-card card h-100">
+    <div class="product-image-container">
+        <img src="@(string.IsNullOrEmpty(Product.ImageUrl) ? "https://via.placeholder.com/300x200?text=No+Image" : Product.ImageUrl)" 
+             class="card-img-top" 
+             alt="@Product.Name"
+             loading="lazy" />
+        
+        @if (Product.StockQuantity <= 0)
+        {
+            <div class="out-of-stock-badge">Out of Stock</div>
+        }
+        else if (Product.StockQuantity < 10)
+        {
+            <div class="low-stock-badge">Only @Product.StockQuantity left</div>
+        }
+        
+        @if (Product.OriginalPrice > Product.Price)
+        {
+            var discount = 100 - (Product.Price * 100 / Product.OriginalPrice);
+            <div class="discount-badge">@discount.ToString("0")% OFF</div>
+        }
+    </div>
+    
+    <div class="card-body d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <h5 class="card-title mb-1">
+                <a href="/products/@Product.Id" class="text-decoration-none text-dark">
+                    @Product.Name
+                </a>
+            </h5>
+            <div class="favorite-icon">
+                <i class="@(IsFavorite ? "fas" : "far") fa-heart" @onclick="ToggleFavorite"></i>
+            </div>
+        </div>
+        
+        <div class="product-category mb-2">
+            <span class="badge bg-light text-dark">@Product.CategoryName</span>
+        </div>
+        
+        <div class="product-price mb-2">
+            <span class="current-price">@Product.Price.ToString("C", CultureInfo.CurrentCulture)</span>
+            @if (Product.OriginalPrice > Product.Price)
+            {
+                <span class="original-price">@Product.OriginalPrice.ToString("C", CultureInfo.CurrentCulture)</span>
+            }
+        </div>
+        
+        <div class="product-rating mb-2">
+            @for (int i = 1; i <= 5; i++)
+            {
+                <i class="fas fa-star @(i <= Math.Max(Product.Rating, 0m) ? "text-warning" : "text-muted")"></i>
+            }
+            <small class="text-muted ms-1">(@Product.ReviewCount)</small>
+        </div>
+        
+        <div class="product-description small text-muted mb-3">
+            @(Product.Description?.Length > 100 ? Product.Description.Substring(0, 100) + "..." : Product.Description)
+        </div>
+        
+        <div class="mt-auto">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="btn-group w-100">
+                    @if (Product.StockQuantity > 0)
+                    {
+                        <button class="btn btn-outline-primary btn-sm" @onclick="AddToCart">
+                            <i class="fas fa-shopping-cart me-1"></i> Add to Cart
+                        </button>
+                        <button class="btn btn-primary btn-sm" @onclick="BuyNow">
+                            Buy Now
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-outline-secondary btn-sm w-100" disabled>
+                            Out of Stock
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card-footer bg-transparent border-top-0 pt-0">
+        <small class="text-muted">
+            @if (Product.IsActive)
+            {
+                <span class="text-success">
+                    <i class="fas fa-check-circle"></i> In Stock
+                </span>
+            }
+            else
+            {
+                <span class="text-danger">
+                    <i class="fas fa-times-circle"></i> Out of Stock
+                </span>
+            }
+        </small>
+        
+        @if (Product.Tags?.Any() == true)
+        {
+            <div class="mt-2">
+                @foreach (var tag in Product.Tags.Take(3))
+                {
+                    <span class="badge bg-light text-muted me-1 mb-1">@tag</span>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public Product Product { get; set; } = new();
+    [Parameter] public EventCallback<Product> OnAddToCart { get; set; }
+    [Parameter] public EventCallback<Product> OnBuyNow { get; set; }
+    [Parameter] public EventCallback<Product> OnToggleFavorite { get; set; }
+    
+    private bool IsFavorite { get; set; }
+    
+    private async Task AddToCart()
+    {
+        await OnAddToCart.InvokeAsync(Product);
+    }
+    
+    private async Task BuyNow()
+    {
+        await OnBuyNow.InvokeAsync(Product);
+    }
+    
+    private async Task ToggleFavorite()
+    {
+        IsFavorite = !IsFavorite;
+        await OnToggleFavorite.InvokeAsync(Product);
+    }
+}
+
+<style>
+    .product-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    
+    .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+    
+    .product-image-container {
+        position: relative;
+        padding-top: 75%; /* 4:3 Aspect Ratio */
+        overflow: hidden;
+    }
+    
+    .product-image-container img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+    
+    .product-card:hover .product-image-container img {
+        transform: scale(1.05);
+    }
+    
+    .out-of-stock-badge,
+    .low-stock-badge,
+    .discount-badge {
+        position: absolute;
+        padding: 0.25rem 0.5rem;
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 0.25rem;
+        z-index: 1;
+    }
+    
+    .out-of-stock-badge {
+        top: 0.5rem;
+        left: 0.5rem;
+        background-color: #dc3545;
+    }
+    
+    .low-stock-badge {
+        top: 0.5rem;
+        left: 0.5rem;
+        background-color: #fd7e14;
+    }
+    
+    .discount-badge {
+        top: 0.5rem;
+        right: 0.5rem;
+        background-color: #28a745;
+    }
+    
+    .favorite-icon {
+        cursor: pointer;
+        font-size: 1.25rem;
+        color: #dc3545;
+    }
+    
+    .product-price {
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .current-price {
+        color: #198754;
+    }
+    
+    .original-price {
+        text-decoration: line-through;
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-left: 0.5rem;
+    }
+    
+    .product-rating {
+        color: #ffc107;
+    }
+    
+    .product-description {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    .btn-outline-primary {
+        border-color: #0d6efd;
+        color: #0d6efd;
+    }
+    
+    .btn-outline-primary:hover {
+        background-color: #0d6efd;
+        color: white;
+    }
+    
+    .card-title a {
+        transition: color 0.2s ease;
+    }
+    
+    .card-title a:hover {
+        color: #0d6efd !important;
+    }
+    
+    /* Responsive adjustments */
+    @@media (max-width: 767.98px) {
+        .product-card {
+            margin-bottom: 1.5rem;
+        }
+    }
+</style>

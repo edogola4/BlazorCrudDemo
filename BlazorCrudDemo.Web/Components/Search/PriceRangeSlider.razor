@@ -1,0 +1,117 @@
+@using System.Globalization
+
+<div class="price-range-slider mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <label class="form-label mb-0">@Label</label>
+        <div class="price-range-values">
+            <span class="min-price">@MinValue.ToString("C2", CultureInfo.CurrentCulture)</span>
+            <span> - </span>
+            <span class="max-price">@MaxValue.ToString("C2", CultureInfo.CurrentCulture)</span>
+        </div>
+    </div>
+    
+    <div class="range-slider">
+        <input type="range" 
+               class="form-range" 
+               min="@Min" 
+               max="@Max" 
+               step="@Step" 
+               @bind="MinValue" 
+               @bind:event="oninput" 
+               @onchange="OnMinValueChanged" />
+        
+        <input type="range" 
+               class="form-range" 
+               min="@Min" 
+               max="@Max" 
+               step="@Step" 
+               @bind="MaxValue" 
+               @bind:event="oninput" 
+               @onchange="OnMaxValueChanged" />
+    </div>
+    
+    <div class="d-flex justify-content-between mt-2">
+        <small class="text-muted">@Min.ToString("C0", CultureInfo.CurrentCulture)</small>
+        <small class="text-muted">@Max.ToString("C0", CultureInfo.CurrentCulture)</small>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "Price Range";
+    [Parameter] public decimal Min { get; set; } = 0;
+    [Parameter] public decimal Max { get; set; } = 1000;
+    [Parameter] public decimal Step { get; set; } = 10;
+    [Parameter] public decimal MinValue { get; set; } = 0;
+    [Parameter] public decimal MaxValue { get; set; } = 500;
+    [Parameter] public EventCallback<(decimal Min, decimal Max)> ValueChanged { get; set; }
+
+    private async Task OnMinValueChanged(ChangeEventArgs e)
+    {
+        if (decimal.TryParse(e.Value?.ToString(), out decimal newValue))
+        {
+            MinValue = Math.Min(newValue, MaxValue - 1);
+            await ValueChanged.InvokeAsync((MinValue, MaxValue));
+        }
+    }
+
+    private async Task OnMaxValueChanged(ChangeEventArgs e)
+    {
+        if (decimal.TryParse(e.Value?.ToString(), out decimal newValue))
+        {
+            MaxValue = Math.Max(newValue, MinValue + 1);
+            await ValueChanged.InvokeAsync((MinValue, MaxValue));
+        }
+    }
+}
+
+<style>
+    .price-range-slider {
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+
+    .range-slider {
+        position: relative;
+        height: 4px;
+        background-color: #dee2e6;
+        margin: 1.5rem 0;
+    }
+
+    .range-slider input[type="range"] {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: none;
+        pointer-events: none;
+        -webkit-appearance: none;
+        z-index: 2;
+        padding: 0;
+        margin: 0;
+    }
+
+    .range-slider input[type="range"]::-webkit-slider-thumb {
+        pointer-events: all;
+        width: 1.2rem;
+        height: 1.2rem;
+        border-radius: 50%;
+        background-color: #0d6efd;
+        -webkit-appearance: none;
+        cursor: pointer;
+    }
+
+    .range-slider input[type="range"]::-moz-range-thumb {
+        pointer-events: all;
+        width: 1.2rem;
+        height: 1.2rem;
+        border-radius: 50%;
+        background-color: #0d6efd;
+        cursor: pointer;
+        border: none;
+    }
+
+    .price-range-values {
+        font-weight: 500;
+        color: #0d6efd;
+    }
+</style>

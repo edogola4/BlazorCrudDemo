@@ -1,0 +1,337 @@
+@using System.Linq
+@typeparam TItem
+
+
+<div class="multi-select-dropdown mb-4" @onclick:stopPropagation>
+    <label class="form-label">@Label</label>
+    
+    <div class="dropdown" @onclick:stopPropagation>
+        <button class="form-select text-start" 
+                @onclick="ToggleDropdown" 
+                @onblur="OnBlur"
+                aria-expanded="_isOpen">
+            @if (SelectedItems.Any())
+            {
+                @if (SelectedItems.Count == 1)
+                {
+                    @GetItemDisplayText(SelectedItems.First())
+                }
+                else
+                {
+                    <span>@SelectedItems.Count selected</span>
+                }
+            }
+            else
+            {
+                <span class="text-muted">@Placeholder</span>
+            }
+        </button>
+        
+        <div class="dropdown-menu @(_isOpen ? "show" : "") w-100">
+            @if (ShowSearch && Items.Any())
+            {
+                <div class="p-2 border-bottom">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" 
+                               class="form-control form-control-sm" 
+                               @bind="_searchTerm" 
+                               @oninput="OnSearchInput"
+                               placeholder="Search..."
+                               @onclick:stopPropagation />
+                    </div>
+                </div>
+            }
+            
+            <div class="dropdown-scroll">
+                @if (FilteredItems.Any())
+                {
+                    <div class="dropdown-item">
+                        <div class="form-check">
+                            <input class="form-check-input" 
+                                   type="checkbox" 
+                                   id="selectAll_@_uniqueId"
+                                   @onchange="ToggleSelectAll"
+                                   checked="@(SelectedItems.Count == FilteredItems.Count && FilteredItems.Any())" />
+                            <label class="form-check-label w-100" for="selectAll_@_uniqueId">
+                                <strong>Select All</strong>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="dropdown-divider"></div>
+                    
+                    @foreach (var item in FilteredItems)
+                    {
+                        var itemId = $"item_{_uniqueId}_{GetItemValue(item)}";
+                        var isSelected = SelectedItems.Contains(item);
+                        
+                        <div class="dropdown-item">
+                            <div class="form-check">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       id="@itemId"
+                                       checked="@isSelected"
+                                       @onchange="() => ToggleItem(item)" />
+                                <label class="form-check-label w-100" for="@itemId">
+                                    @GetItemDisplayText(item)
+                                    @if (ShowItemCount && GetItemCount != null)
+                                    {
+                                        <span class="text-muted small ms-1">(@GetItemCount(item))</span>
+                                    }
+                                </label>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="dropdown-item text-muted">
+                        @(string.IsNullOrEmpty(_searchTerm) ? "No items available" : "No matching items found")
+                    </div>
+                }
+            </div>
+            
+            @if (ShowActions && (SelectedItems.Any() || _searchTerm?.Length > 0))
+            {
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item d-flex justify-content-between">
+                    @if (SelectedItems.Any())
+                    {
+                        <button class="btn btn-sm btn-link p-0 text-danger" @onclick="ClearSelection">
+                            Clear
+                        </button>
+                    }
+                    
+                    @if (_searchTerm?.Length > 0)
+                    {
+                        <button class="btn btn-sm btn-link p-0 ms-auto" @onclick="ClearSearch">
+                            Clear search
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = string.Empty;
+    [Parameter] public string Placeholder { get; set; } = "Select items...";
+    [Parameter] public IReadOnlyList<TItem> Items { get; set; } = new List<TItem>();
+    [Parameter] public IReadOnlyList<TItem> SelectedItems { get; set; } = new List<TItem>();
+    [Parameter] public EventCallback<IReadOnlyList<TItem>> SelectedItemsChanged { get; set; }
+    [Parameter] public Func<TItem, string>? GetItemText { get; set; }
+    [Parameter] public Func<TItem, string>? GetItemValue { get; set; }
+    [Parameter] public bool ShowSearch { get; set; } = true;
+    [Parameter] public bool ShowItemCount { get; set; } = true;
+    [Parameter] public bool ShowActions { get; set; } = true;
+    [Parameter] public Func<TItem, string>? GetItemCount { get; set; }
+    
+    private bool _isOpen = false;
+    private string _searchTerm = string.Empty;
+    private string _uniqueId = Guid.NewGuid().ToString("N");
+    private IReadOnlyList<TItem> _filteredItems = new List<TItem>();
+    
+    private IReadOnlyList<TItem> FilteredItems 
+    { 
+        get => _filteredItems; 
+        set 
+        { 
+            if (!_filteredItems.SequenceEqual(value ?? new List<TItem>()))
+            {
+                _filteredItems = value ?? new List<TItem>();
+                StateHasChanged();
+            }
+        } 
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        UpdateFilteredItems();
+    }
+    
+    private void UpdateFilteredItems()
+    {
+        if (string.IsNullOrWhiteSpace(_searchTerm))
+        {
+            FilteredItems = Items;
+        }
+        else
+        {
+            var searchTerm = _searchTerm.Trim().ToLower();
+            FilteredItems = Items
+                .Where(item => GetItemDisplayText(item).ToLower().Contains(searchTerm))
+                .ToList();
+        }
+    }
+    
+    private string GetItemDisplayText(TItem item)
+    {
+        if (item == null) return string.Empty;
+        return GetItemText?.Invoke(item) ?? item?.ToString() ?? string.Empty;
+    }
+    
+    private string GetItemValueString(TItem item)
+    {
+        if (item == null) return string.Empty;
+        return GetItemValue?.Invoke(item) ?? item?.GetHashCode().ToString() ?? string.Empty;
+    }
+    
+    private void ToggleDropdown()
+    {
+        _isOpen = !_isOpen;
+        if (_isOpen)
+        {
+            _searchTerm = string.Empty;
+            UpdateFilteredItems();
+        }
+    }
+    
+    private void OnBlur()
+    {
+        // Small delay to allow click events to be processed
+        Task.Delay(200).ContinueWith(_ => 
+        {
+            InvokeAsync(() => 
+            {
+                _isOpen = false;
+                StateHasChanged();
+            });
+        });
+    }
+    
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _searchTerm = e.Value?.ToString() ?? string.Empty;
+        UpdateFilteredItems();
+    }
+    
+    private async Task ToggleItem(TItem item)
+    {
+        var newSelection = SelectedItems.ToList();
+        
+        if (newSelection.Contains(item))
+        {
+            newSelection.Remove(item);
+        }
+        else
+        {
+            newSelection.Add(item);
+        }
+        
+        await SelectedItemsChanged.InvokeAsync(newSelection.AsReadOnly());
+    }
+    
+    private async Task ToggleSelectAll(ChangeEventArgs e)
+    {
+        var isChecked = e.Value as bool? ?? false;
+        
+        if (isChecked)
+        {
+            // Add only filtered items that aren't already selected
+            var newSelection = SelectedItems.Union(FilteredItems).ToList();
+            await SelectedItemsChanged.InvokeAsync(newSelection.AsReadOnly());
+        }
+        else
+        {
+            // Remove only filtered items that are selected
+            var newSelection = SelectedItems.Except(FilteredItems).ToList();
+            await SelectedItemsChanged.InvokeAsync(newSelection.AsReadOnly());
+        }
+    }
+    
+    private async Task ClearSelection()
+    {
+        await SelectedItemsChanged.InvokeAsync(new List<TItem>().AsReadOnly());
+    }
+    
+    private void ClearSearch()
+    {
+        _searchTerm = string.Empty;
+        UpdateFilteredItems();
+    }
+}
+
+<style>
+    .multi-select-dropdown .dropdown-menu {
+        max-height: 300px;
+        overflow: hidden;
+        display: block;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(10px);
+        transition: all 0.2s ease-in-out;
+    }
+    
+    .multi-select-dropdown .dropdown-menu.show {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+    
+    .dropdown-scroll {
+        max-height: 250px;
+        overflow-y: auto;
+    }
+    
+    .dropdown-item {
+        padding: 0.25rem 1rem;
+    }
+    
+    .form-check {
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .form-check-input {
+        margin-top: 0.3em;
+    }
+    
+    .form-check-label {
+        cursor: pointer;
+    }
+    
+    .form-select {
+        text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* Hide the default dropdown arrow */
+    .form-select {
+        background-image: none;
+        padding-right: 2.25rem;
+        position: relative;
+    }
+    
+    /* Add custom dropdown arrow */
+    .form-select:after {
+        content: "\f107";
+        font-family: "Font Awesome 5 Free";
+        font-weight: 900;
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+    }
+    
+    .form-select[aria-expanded="true"]:after {
+        content: "\f106";
+    }
+    
+    /* Style for selected items count */
+    .selected-count {
+        position: absolute;
+        right: 2.5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background-color: #e9ecef;
+        border-radius: 10px;
+        padding: 0.1rem 0.5rem;
+        font-size: 0.75rem;
+        color: #495057;
+    }
+</style>

@@ -1,0 +1,144 @@
+@using System.Globalization
+
+<div class="date-range-picker mb-4">
+    <label class="form-label">@Label</label>
+    
+    <div class="row g-2">
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text"><i class="far fa-calendar-alt"></i></span>
+                <input type="date" 
+                       class="form-control" 
+                       value="@StartDateString" 
+                       @onchange="OnStartDateChanged" 
+                       max="@(EndDate?.ToString("yyyy-MM-dd") ?? DateTime.Today.ToString("yyyy-MM-dd"))" />
+            </div>
+            <div class="form-text text-muted">Start Date</div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="input-group">
+                <span class="input-group-text"><i class="far fa-calendar-alt"></i></span>
+                <input type="date" 
+                       class="form-control" 
+                       value="@EndDateString" 
+                       @onchange="OnEndDateChanged" 
+                       min="@(StartDate?.ToString("yyyy-MM-dd") ?? "")"
+                       max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="form-text text-muted">End Date</div>
+        </div>
+    </div>
+    
+    @if (ShowQuickRanges)
+    {
+        <div class="quick-ranges mt-2">
+            <small class="me-2">Quick select:</small>
+            @foreach (var range in QuickRanges)
+            {
+                <button type="button" 
+                        class="btn btn-sm btn-outline-secondary me-1 mb-1"
+                        @onclick="() => SelectQuickRange(range)">
+                    @range.Label
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "Date Range";
+    [Parameter] public DateTime? StartDate { get; set; }
+    [Parameter] public DateTime? EndDate { get; set; }
+    [Parameter] public EventCallback<(DateTime? Start, DateTime? End)> ValueChanged { get; set; }
+    [Parameter] public bool ShowQuickRanges { get; set; } = true;
+    
+    private string StartDateString { get; set; } = "";
+    private string EndDateString { get; set; } = "";
+
+    private List<QuickDateRange> QuickRanges => new()
+    {
+        new() { Label = "Today", StartDate = DateTime.Today, EndDate = DateTime.Today },
+        new() { Label = "Last 7 Days", StartDate = DateTime.Today.AddDays(-6), EndDate = DateTime.Today },
+        new() { Label = "Last 30 Days", StartDate = DateTime.Today.AddDays(-29), EndDate = DateTime.Today },
+        new() { Label = "This Month", StartDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1), EndDate = DateTime.Today },
+        new() { Label = "Last Month", StartDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1), 
+                EndDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddDays(-1) },
+    };
+
+    protected override void OnInitialized()
+    {
+        StartDateString = StartDate?.ToString("yyyy-MM-dd") ?? "";
+        EndDateString = EndDate?.ToString("yyyy-MM-dd") ?? "";
+    }
+
+    private async Task OnStartDateChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out DateTime newDate))
+        {
+            StartDate = newDate;
+            if (EndDate < StartDate)
+            {
+                EndDate = StartDate;
+                EndDateString = StartDate?.ToString("yyyy-MM-dd") ?? "";
+            }
+            await ValueChanged.InvokeAsync((StartDate, EndDate));
+        }
+    }
+
+    private async Task OnEndDateChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out DateTime newDate))
+        {
+            EndDate = newDate;
+            if (StartDate > EndDate)
+            {
+                StartDate = EndDate;
+                StartDateString = EndDate?.ToString("yyyy-MM-dd") ?? "";
+            }
+            await ValueChanged.InvokeAsync((StartDate, EndDate));
+        }
+    }
+
+    private async Task SelectQuickRange(QuickDateRange range)
+    {
+        StartDate = range.StartDate;
+        EndDate = range.EndDate;
+        StartDateString = StartDate?.ToString("yyyy-MM-dd") ?? "";
+        EndDateString = EndDate?.ToString("yyyy-MM-dd") ?? "";
+        await ValueChanged.InvokeAsync((StartDate, EndDate));
+    }
+
+    private class QuickDateRange
+    {
+        public string Label { get; set; } = string.Empty;
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+    }
+}
+
+<style>
+    .date-range-picker {
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+    
+    .quick-ranges {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .quick-ranges small {
+        color: #6c757d;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        line-height: 1.5;
+        border-radius: 0.2rem;
+    }
+</style>
