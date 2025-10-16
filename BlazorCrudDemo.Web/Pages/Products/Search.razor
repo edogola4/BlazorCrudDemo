@@ -1,0 +1,783 @@
+@page "/products/search"
+@page "/products/search/{*searchParams}"
+@using BlazorCrudDemo.Web.Components.Search
+@using BlazorCrudDemo.Web.Models
+@using BlazorCrudDemo.Web.Components.Products
+@using BlazorCrudDemo.Web.Services
+@using BlazorCrudDemo.Shared.Models
+@using System.Web
+@using Microsoft.AspNetCore.Components
+@inject NavigationManager NavigationManager
+@inject ILogger<ProductSearch> Logger
+
+<PageTitle>Search Products</PageTitle>
+
+<div class="search-page">
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Filters Sidebar -->
+            <div class="col-lg-3 col-xl-2 d-none d-lg-block">
+                <div class="filters-sidebar">
+                    <div class="filters-header">
+                        <h5>Filters</h5>
+                        <button class="btn btn-link p-0" @onclick="ClearAllFilters">
+                            Clear all
+                        </button>
+                    </div>
+                    
+                    <!-- Search Box -->
+                    <div class="filter-section">
+                        <div class="input-group mb-3">
+                            <input type="text" 
+                                   class="form-control" 
+                                   placeholder="Search products..." 
+                                   @bind="SearchParameters.Keywords"
+                                   @onkeyup="HandleSearchKeyUp" />
+                            <button class="btn btn-primary" @onclick="PerformSearch">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Price Range -->
+                    <div class="filter-section">
+                        <h6>Price Range</h6>
+                        <PriceRangeSlider 
+                            Min="0" 
+                            Max="1000" 
+                            Step="10"
+                            MinValue="@(SearchParameters.MinPrice ?? 0)"
+                            MaxValue="@(SearchParameters.MaxPrice ?? 500)"
+                            ValueChanged="OnPriceRangeChanged" />
+                    </div>
+                    
+                    <!-- Stock Status -->
+                    <div class="filter-section">
+                        <h6>Stock Status</h6>
+                        <div class="form-check">
+                            <input class="form-check-input" 
+                                   type="checkbox" 
+                                   id="inStockFilter" 
+                                   @bind="SearchParameters.InStockOnly" />
+                            <label class="form-check-label" for="inStockFilter">
+                                In Stock Only
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Categories -->
+                    @if (_categories.Any())
+                    {
+                        <div class="filter-section">
+                            <h6>Categories</h6>
+                            <MultiSelectDropdown 
+                                Items="_categories"
+                                SelectedItems="_selectedCategories"
+                                SelectedItemsChanged="@((IReadOnlyList<Category> categories) => OnCategoriesChanged(categories))"
+                                GetItemText="c => c.Name"
+                                GetItemValue="c => c.Id.ToString()"
+                                Label=""
+                                Placeholder="Select categories..." />
+                        </div>
+                    }
+                    
+                    <!-- Date Added -->
+                    <div class="filter-section">
+                        <h6>Date Added</h6>
+                        <DateRangePicker 
+                            StartDate="SearchParameters.CreatedAfter"
+                            EndDate="SearchParameters.CreatedBefore"
+                            ValueChanged="OnDateRangeChanged"
+                            ShowQuickRanges="true" />
+                    </div>
+                    
+                    <!-- Tags -->
+                    @if (_availableTags.Any())
+                    {
+                        <div class="filter-section">
+                            <h6>Tags</h6>
+                            <TagFilter 
+                                AvailableTags="_availableTags"
+                                SelectedTags="_selectedTags"
+                                SelectedTagsChanged="OnTagsChanged"
+                                PopularTags="_popularTags"
+                                Label="" />
+                        </div>
+                    }
+                    
+                    <!-- Active Status -->
+                    <div class="filter-section">
+                        <h6>Status</h6>
+                        <div class="form-check">
+                            <input class="form-check-input" 
+                                   type="checkbox" 
+                                   id="activeOnlyFilter" 
+                                   @bind="SearchParameters.IsActive" />
+                            <label class="form-check-label" for="activeOnlyFilter">
+                                Active Only
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-12 col-lg-9 col-xl-10">
+                <div class="search-results-container">
+                    <!-- Search Header -->
+                    <div class="search-header mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="mb-0">
+                                @if (!string.IsNullOrEmpty(SearchParameters.Keywords))
+                                {
+                                    <span>Search Results for "@SearchParameters.Keywords"</span>
+                                }
+                                else
+                                {
+                                    <span>All Products</span>
+                                }
+                                <small class="text-muted ms-2">
+                                    (@_searchResult?.TotalCount ?? 0) @(_searchResult?.TotalCount == 1 ? "item" : "items")
+                                </small>
+                            </h4>
+                            
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <label class="form-label me-2">Sort by:</label>
+                                    <select class="form-select form-select-sm d-inline-block w-auto" 
+                                            @bind="_sortBy">
+                                        <option value="name_asc">Name (A-Z)</option>
+                                        <option value="name_desc">Name (Z-A)</option>
+                                        <option value="price_asc">Price (Low to High)</option>
+                                        <option value="price_desc">Price (High to Low)</option>
+                                        <option value="newest">Newest First</option>
+                                        <option value="oldest">Oldest First</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="btn-group" role="group">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-secondary @(_viewMode == "grid" ? "active" : "")"
+                                            @onclick='() => ChangeViewMode("grid")'>
+                                        <i class="fas fa-th"></i>
+                                    </button>
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-secondary @(_viewMode == "list" ? "active" : "")"
+                                            @onclick='() => ChangeViewMode("list")'>
+                                        <i class="fas fa-list"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Active Filters -->
+                        @if (HasActiveFilters)
+                        {
+                            <div class="active-filters">
+                                @if (SearchParameters.MinPrice.HasValue || SearchParameters.MaxPrice.HasValue)
+                                {
+                                    <span class="badge bg-light text-dark me-2 mb-2">
+                                        Price: 
+                                        @if (SearchParameters.MinPrice.HasValue && SearchParameters.MaxPrice.HasValue)
+                                        {
+                                            @($"{SearchParameters.MinPrice:C} - {SearchParameters.MaxPrice:C}")
+                                        }
+                                        else if (SearchParameters.MinPrice.HasValue)
+                                        {
+                                            @($"Above {SearchParameters.MinPrice:C}")
+                                        }
+                                        else if (SearchParameters.MaxPrice.HasValue)
+                                        {
+                                            @($"Under {SearchParameters.MaxPrice:C}")
+                                        }
+                                        <button type="button" class="btn-close ms-1" @onclick="ClearPriceFilter"></button>
+                                    </span>
+                                }
+                                
+                                @if (_selectedCategories.Any())
+                                {
+                                    foreach (var category in _selectedCategories)
+                                    {
+                                        <span class="badge bg-light text-dark me-2 mb-2">
+                                            @category.Name
+                                            <button type="button" class="btn-close ms-1" 
+                                                    @onclick="() => RemoveCategoryFilter(category)"></button>
+                                        </span>
+                                    }
+                                }
+                                
+                                @if (_selectedTags.Any())
+                                {
+                                    foreach (var tag in _selectedTags)
+                                    {
+                                        <span class="badge bg-light text-dark me-2 mb-2">
+                                            @tag
+                                            <button type="button" class="btn-close ms-1" 
+                                                    @onclick="() => RemoveTagFilter(tag)"></button>
+                                        </span>
+                                    }
+                                }
+                                
+                                @if (SearchParameters.CreatedAfter.HasValue || SearchParameters.CreatedBefore.HasValue)
+                                {
+                                    <span class="badge bg-light text-dark me-2 mb-2">
+                                        Date: 
+                                        @(SearchParameters.CreatedAfter?.ToString("MMM d, yyyy") ?? "Any")
+                                        to
+                                        @(SearchParameters.CreatedBefore?.ToString("MMM d, yyyy") ?? "Now")
+                                        <button type="button" class="btn-close ms-1" @onclick="ClearDateFilter"></button>
+                                    </span>
+                                }
+                                
+                                @if (SearchParameters.InStockOnly)
+                                {
+                                    <span class="badge bg-light text-dark me-2 mb-2">
+                                        In Stock Only
+                                        <button type="button" class="btn-close ms-1" @onclick="() => ToggleInStockFilter(false)"></button>
+                                    </span>
+                                }
+                                
+                                @if (SearchParameters.IsActive.HasValue)
+                                {
+                                    <span class="badge bg-light text-dark me-2 mb-2">
+                                        @(SearchParameters.IsActive.Value ? "Active" : "Inactive")
+                                        <button type="button" class="btn-close ms-1" @onclick="() => ToggleStatusFilter(null)"></button>
+                                    </span>
+                                }
+                            </div>
+                        }
+                    </div>
+                    
+                    <!-- Search Results -->
+                    @if (_isLoading)
+                    {
+                        <div class="text-center my-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Searching products...</p>
+                        </div>
+                    }
+                    else if (_searchResult?.Items.Any() == true)
+                    {
+                        if (_viewMode == "grid")
+                        {
+                            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                                @foreach (var product in _searchResult.Items)
+                                {
+                                    <div class="col">
+                                        <ProductCard Product="product" />
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="list-group">
+                                @foreach (var product in _searchResult.Items)
+                                {
+                                    <ProductListItem Product="product" />
+                                }
+                            </div>
+                        }
+                        
+                        <!-- Pagination -->
+                        @if (_searchResult.TotalPages > 1)
+                        {
+                            <nav aria-label="Search results pagination" class="mt-4">
+                                <ul class="pagination justify-content-center">
+                                    <li class="page-item @(SearchParameters.PageNumber == 1 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => ChangePage(1)">
+                                            <i class="fas fa-angle-double-left"></i>
+                                        </button>
+                                    </li>
+                                    <li class="page-item @(SearchParameters.PageNumber == 1 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => ChangePage(SearchParameters.PageNumber - 1)">
+                                            <i class="fas fa-angle-left"></i>
+                                        </button>
+                                    </li>
+                                    
+                                    @for (int i = Math.Max(1, SearchParameters.PageNumber - 2); i <= Math.Min(SearchParameters.PageNumber + 2, _searchResult.TotalPages); i++)
+                                    {
+                                        <li class="page-item @(i == SearchParameters.PageNumber ? "active" : "")">
+                                            <button class="page-link" @onclick="() => ChangePage(i)">@i</button>
+                                        </li>
+                                    }
+                                    
+                                    <li class="page-item @(SearchParameters.PageNumber >= _searchResult.TotalPages ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => ChangePage(SearchParameters.PageNumber + 1)">
+                                            <i class="fas fa-angle-right"></i>
+                                        </button>
+                                    </li>
+                                    <li class="page-item @(SearchParameters.PageNumber >= _searchResult.TotalPages ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => ChangePage(_searchResult.TotalPages)">
+                                            <i class="fas fa-angle-double-right"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        }
+                    }
+                    else if (!_isLoading)
+                    {
+                        <div class="text-center my-5">
+                            <div class="empty-state">
+                                <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                                <h5>No products found</h5>
+                                <p class="text-muted">
+                                    @if (HasActiveFilters)
+                                    {
+                                        <span>Try adjusting your search or filter criteria</span>
+                                    }
+                                    else
+                                    {
+                                        <span>No products match your search criteria</span>
+                                    }
+                                </p>
+                                @if (HasActiveFilters)
+                                {
+                                    <button class="btn btn-outline-primary" @onclick="ClearAllFilters">
+                                        Clear all filters
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .search-page {
+        padding: 1.5rem 0;
+        min-height: calc(100vh - 200px);
+    }
+    
+    .filters-sidebar {
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1.25rem;
+        position: sticky;
+        top: 1rem;
+        max-height: calc(100vh - 2rem);
+        overflow-y: auto;
+    }
+    
+    .filters-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .filter-section {
+        margin-bottom: 1.5rem;
+        padding-bottom: 1.25rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .filter-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .filter-section h6 {
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        color: #495057;
+    }
+    
+    .search-results-container {
+        padding: 0 1rem;
+    }
+    
+    .search-header {
+        background: white;
+        padding: 1.25rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        margin-bottom: 1.5rem;
+    }
+    
+    .active-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .badge .btn-close {
+        font-size: 0.5rem;
+        padding: 0.5em;
+        margin-left: 0.25rem;
+    }
+    
+    .empty-state {
+        padding: 3rem 1rem;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+    
+    /* Responsive styles */
+    @@media (max-width: 991.98px) {
+        .search-results-container {
+            padding: 0;
+        }
+        
+        .search-header {
+            border-radius: 0;
+            margin-left: -1rem;
+            margin-right: -1rem;
+            padding: 1rem;
+        }
+    }
+    
+    @@media (max-width: 767.98px) {
+        .search-header {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .search-sort {
+            width: 100%;
+        }
+    }
+</style>
+
+@inject NavigationManager NavigationManager
+@inject ILogger<Search> Logger
+
+@code {
+    [Parameter] public string? SearchParams { get; set; }
+
+    private ProductSearchModel SearchParameters { get; set; } = new();
+    private BlazorCrudDemo.Web.Models.SearchResult<Product>? _searchResult;
+    private bool _isLoading = true;
+    private string _viewMode = "grid";
+    private string _sortBy = "name_asc";
+
+    // Sample data - replace with actual data from your database
+    private List<Category> _categories = new();
+    private List<Category> _selectedCategories = new();
+    private List<string> _availableTags = new() { "Electronics", "Home", "Office", "Gaming", "Accessories" };
+    private List<string> _selectedTags = new();
+    private List<string> _popularTags = new() { "Electronics", "Home", "Office" };
+
+    private bool HasActiveFilters =>
+        !string.IsNullOrEmpty(SearchParameters.Keywords) ||
+        SearchParameters.MinPrice.HasValue ||
+        SearchParameters.MaxPrice.HasValue ||
+        SearchParameters.InStockOnly ||
+        SearchParameters.IsActive.HasValue ||
+        _selectedCategories.Any() ||
+        _selectedTags.Any() ||
+        SearchParameters.CreatedAfter.HasValue ||
+        SearchParameters.CreatedBefore.HasValue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+
+        if (!string.IsNullOrEmpty(SearchParams))
+        {
+            try
+            {
+                var decodedParams = HttpUtility.UrlDecode(SearchParams);
+                SearchParameters = System.Text.Json.JsonSerializer.Deserialize<ProductSearchModel>(decodedParams) ?? new ProductSearchModel();
+
+                // Update UI based on search parameters
+                _selectedCategories = _categories
+                    .Where(c => SearchParameters.CategoryIds?.Contains(c.Id) == true)
+                    .ToList();
+
+                _selectedTags = SearchParameters.Tags?.ToList() ?? new();
+                _sortBy = SearchParameters.SortBy ?? "name_asc";
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error parsing search parameters");
+                SearchParameters = new ProductSearchModel();
+            }
+        }
+
+        await PerformSearch();
+    }
+
+    private async Task LoadCategories()
+    {
+        try
+        {
+            // Replace with actual category loading logic
+            _categories = new List<Category>
+            {
+                new() { Id = 1, Name = "Electronics" },
+                new() { Id = 2, Name = "Clothing" },
+                new() { Id = 3, Name = "Home & Garden" },
+                new() { Id = 4, Name = "Sports & Outdoors" },
+                new() { Id = 5, Name = "Toys & Games" },
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading categories");
+        }
+    }
+
+    private async Task PerformSearch()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            // Update search parameters
+            SearchParameters.CategoryIds = _selectedCategories.Select(c => c.Id).ToList();
+            SearchParameters.Tags = _selectedTags;
+            SearchParameters.SortBy = _sortBy;
+
+            // In a real app, this would call your search service
+            // _searchResult = await SearchService.PerformSearch(SearchParameters);
+
+            // Simulate API call
+            await Task.Delay(500);
+
+            // Sample data - replace with actual search results
+            _searchResult = new BlazorCrudDemo.Web.Models.SearchResult<Product>
+            {
+                Items = GenerateSampleProducts(),
+                TotalCount = 42,
+                PageNumber = SearchParameters.PageNumber,
+                PageSize = SearchParameters.PageSize
+            };
+
+            // Update URL with search parameters
+            var json = System.Text.Json.JsonSerializer.Serialize(SearchParameters);
+            var encodedParams = HttpUtility.UrlEncode(json);
+            NavigationManager.NavigateTo($"/products/search/{encodedParams}", false);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error performing search");
+            // Show error message to user
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private List<Product> GenerateSampleProducts()
+    {
+        // Generate sample products for demo purposes
+        var products = new List<Product>();
+        var random = new Random();
+
+        for (int i = 1; i <= 12; i++)
+        {
+            var price = (decimal)(random.Next(10, 1000) + random.NextDouble());
+            var category = _categories.ElementAtOrDefault(random.Next(0, _categories.Count)) ?? _categories.FirstOrDefault() ?? new Category { Name = "Uncategorized" };
+
+            products.Add(new Product
+            {
+                Id = i,
+                Name = $"Product {i}",
+                Description = $"This is a sample product description for product {i}. It includes various features and specifications.",
+                Price = price,
+                OriginalPrice = price * 1.2m,
+                Stock = random.Next(0, 100),
+                CategoryId = category.Id,
+                ImageUrl = $"https://via.placeholder.com/300?text=Product+{i}",
+                IsActive = random.Next(0, 10) > 1, // 80% chance of being active
+                CreatedDate = DateTime.UtcNow.AddDays(-random.Next(0, 365)),
+                Tags = _availableTags.OrderBy(x => random.Next()).Take(random.Next(1, 4)).ToList()
+            });
+        }
+
+        // Apply filters to sample data
+        if (SearchParameters.MinPrice.HasValue)
+            products = products.Where(p => p.Price >= SearchParameters.MinPrice.Value).ToList();
+
+        if (SearchParameters.MaxPrice.HasValue)
+            products = products.Where(p => p.Price <= SearchParameters.MaxPrice.Value).ToList();
+
+        if (SearchParameters.InStockOnly)
+            products = products.Where(p => p.StockQuantity > 0).ToList();
+
+        if (SearchParameters.IsActive.HasValue)
+            products = products.Where(p => p.IsActive == SearchParameters.IsActive.Value).ToList();
+
+        if (_selectedCategories.Any())
+            products = products.Where(p => _selectedCategories.Any(c => c.Id == p.CategoryId)).ToList();
+
+        if (_selectedTags.Any())
+            products = products.Where(p => p.Tags?.Any(t => _selectedTags.Contains(t)) == true).ToList();
+
+        // Apply sorting
+        products = _sortBy switch
+        {
+            "name_asc" => products.OrderBy(p => p.Name).ToList(),
+            "name_desc" => products.OrderByDescending(p => p.Name).ToList(),
+            "price_asc" => products.OrderBy(p => p.Price).ToList(),
+            "price_desc" => products.OrderByDescending(p => p.Price).ToList(),
+            "newest" => products.OrderByDescending(p => p.CreatedDate).ToList(),
+            "oldest" => products.OrderBy(p => p.CreatedDate).ToList(),
+            _ => products.OrderBy(p => p.Name).ToList()
+        };
+
+        // Apply pagination
+        products = products
+            .Skip((SearchParameters.PageNumber - 1) * SearchParameters.PageSize)
+            .Take(SearchParameters.PageSize)
+            .ToList();
+
+        return products;
+    }
+
+    private async Task OnPriceRangeChanged((decimal Min, decimal Max) range)
+    {
+        SearchParameters.MinPrice = range.Min;
+        SearchParameters.MaxPrice = range.Max;
+        SearchParameters.PageNumber = 1;
+        await PerformSearch();
+    }
+
+    private async Task OnDateRangeChanged((DateTime? Start, DateTime? End) range)
+    {
+        SearchParameters.CreatedAfter = range.Start;
+        SearchParameters.CreatedBefore = range.End;
+        SearchParameters.PageNumber = 1;
+        await PerformSearch();
+    }
+
+    private async Task OnCategoriesChanged(IReadOnlyList<Category> selectedCategories)
+    {
+        _selectedCategories = selectedCategories.ToList();
+        SearchParameters.PageNumber = 1;
+        await PerformSearch();
+    }
+
+    private async Task OnTagsChanged(IReadOnlyList<string> selectedTags)
+    {
+        _selectedTags = selectedTags.ToList();
+        SearchParameters.PageNumber = 1;
+        await PerformSearch();
+    }
+
+    private async Task OnFilterChanged()
+    {
+        SearchParameters.PageNumber = 1;
+        await PerformSearch();
+    }
+
+    private async Task ToggleInStockFilter(bool? value)
+    {
+        SearchParameters.InStockOnly = value == true;
+        SearchParameters.PageNumber = 1;
+        await PerformSearch();
+    }
+
+    private async Task ToggleStatusFilter(bool? value)
+    {
+        SearchParameters.IsActive = value;
+        SearchParameters.PageNumber = 1;
+        await PerformSearch();
+    }
+
+    private async Task RemoveCategoryFilter(Category category)
+    {
+        _selectedCategories.Remove(category);
+        SearchParameters.PageNumber = 1;
+        await PerformSearch();
+    }
+
+    private async Task RemoveTagFilter(string tag)
+    {
+        _selectedTags.Remove(tag);
+        SearchParameters.PageNumber = 1;
+        await PerformSearch();
+    }
+
+    private async Task ClearPriceFilter()
+    {
+        SearchParameters.MinPrice = null;
+        SearchParameters.MaxPrice = null;
+        SearchParameters.PageNumber = 1;
+        await PerformSearch();
+    }
+
+    private async Task ClearDateFilter()
+    {
+        SearchParameters.CreatedAfter = null;
+        SearchParameters.CreatedBefore = null;
+        SearchParameters.PageNumber = 1;
+        await PerformSearch();
+    }
+
+    private async Task ClearAllFilters()
+    {
+        SearchParameters = new ProductSearchModel();
+        _selectedCategories.Clear();
+        _selectedTags.Clear();
+        _sortBy = "name_asc";
+        await PerformSearch();
+    }
+
+    private async Task ChangePage(int pageNumber)
+    {
+        if (pageNumber < 1 || pageNumber > (_searchResult?.TotalPages ?? 1))
+            return;
+
+        SearchParameters.PageNumber = pageNumber;
+        await PerformSearch();
+
+        // Scroll to top of results - simplified for now
+        // await JSRuntime.InvokeVoidAsync("window.scrollTo", new object[] { 0, 0 });
+    }
+
+    private async Task ChangeViewMode(string viewMode)
+    {
+        _viewMode = viewMode;
+        // No need to reload data, just update the UI
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnSortChanged(ChangeEventArgs e)
+    {
+        _sortBy = e.Value?.ToString() ?? "name_asc";
+        SearchParameters.PageNumber = 1;
+        await PerformSearch();
+    }
+
+    private async Task HandleSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await PerformSearch();
+        }
+    }
+
+    // Helper method to highlight search terms in text
+    private MarkupString HighlightSearchTerms(string text, string? searchTerm)
+    {
+        if (string.IsNullOrEmpty(searchTerm) || string.IsNullOrEmpty(text))
+            return (MarkupString)HttpUtility.HtmlEncode(text);
+
+        var escapedSearchTerm = System.Text.RegularExpressions.Regex.Escape(searchTerm);
+        var pattern = $"(?i)({escapedSearchTerm})";
+        var highlighted = System.Text.RegularExpressions.Regex.Replace(
+            text,
+            pattern,
+            "<span class=\"highlight\">$1</span>");
+
+        return (MarkupString)highlighted;
+    }
+}
