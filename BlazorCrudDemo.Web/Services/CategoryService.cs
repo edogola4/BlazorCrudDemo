@@ -140,7 +140,7 @@ public class CategoryService : ICategoryService
             _logger.LogDebug("Creating category with name {Name}", createDto.Name);
 
             // Validate the category
-            var validationResult = await ValidateCategoryAsync(_mapper.Map<CategoryDto>(createDto));
+            var validationResult = await ValidateCategoryAsync(createDto);
             if (!validationResult.IsValid)
             {
                 throw new ValidationException("Category validation failed", validationResult.Errors);
@@ -192,7 +192,7 @@ public class CategoryService : ICategoryService
             _logger.LogDebug("Updating category with ID {Id}", updateDto.Id);
 
             // Validate the category
-            var validationResult = await ValidateCategoryAsync(_mapper.Map<CategoryDto>(updateDto));
+            var validationResult = await ValidateCategoryAsync(updateDto);
             if (!validationResult.IsValid)
             {
                 throw new ValidationException("Category validation failed", validationResult.Errors);
@@ -393,25 +393,31 @@ public class CategoryService : ICategoryService
     }
 
     /// <inheritdoc />
-    public async Task<ValidationResult> ValidateCategoryAsync(CategoryDto categoryDto)
+    public async Task<ValidationResult> ValidateCategoryAsync(object categoryDto)
     {
+        // Handle both CreateCategoryDto and UpdateCategoryDto
+        var name = categoryDto.GetType().GetProperty("Name")?.GetValue(categoryDto) as string;
+        var description = categoryDto.GetType().GetProperty("Description")?.GetValue(categoryDto) as string;
+        var icon = categoryDto.GetType().GetProperty("Icon")?.GetValue(categoryDto) as string;
+        var displayOrder = (int?)categoryDto.GetType().GetProperty("DisplayOrder")?.GetValue(categoryDto) ?? 0;
+
         var errors = new Dictionary<string, string[]>();
         var errorMessages = new List<string>();
 
         // Business validation rules
-        if (string.IsNullOrWhiteSpace(categoryDto.Name))
+        if (string.IsNullOrWhiteSpace(name))
             errorMessages.Add("Category name is required");
 
-        if (categoryDto.Name?.Length > 100)
+        if (name?.Length > 100)
             errorMessages.Add("Category name cannot exceed 100 characters");
 
-        if (categoryDto.Description?.Length > 500)
+        if (description?.Length > 500)
             errorMessages.Add("Description cannot exceed 500 characters");
 
-        if (categoryDto.Icon?.Length > 200)
+        if (icon?.Length > 200)
             errorMessages.Add("Icon cannot exceed 200 characters");
 
-        if (categoryDto.DisplayOrder < 0)
+        if (displayOrder < 0)
             errorMessages.Add("Display order must be non-negative");
 
         if (errorMessages.Any())
