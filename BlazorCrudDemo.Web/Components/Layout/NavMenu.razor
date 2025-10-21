@@ -5,6 +5,27 @@
 <div class="nav-menu @(IsMobile ? "mobile-nav" : "desktop-nav") @(IsCollapsed ? "collapsed" : "")">
     <!-- Navigation Items -->
     <nav class="nav-items">
+        <!-- Dashboard -->
+        <div class="nav-item @(IsActive("/") ? "active" : "")" @onclick="() => NavigateToDashboard()">
+            <NavLink href="/" class="nav-link" Match="NavLinkMatch.All">
+                <div class="nav-icon-wrapper">
+                    <i class="bi bi-speedometer2 nav-icon"></i>
+                    @if (!IsCollapsed)
+                    {
+                        <span class="nav-text">Dashboard</span>
+                    }
+                    else
+                    {
+                        <span class="nav-tooltip">Dashboard</span>
+                    }
+                </div>
+                @if (IsActive("/"))
+                {
+                    <div class="nav-indicator"></div>
+                }
+            </NavLink>
+        </div>
+
         <!-- Home -->
         <div class="nav-item @(IsActive("/") ? "active" : "")" @onclick="() => NavigateToHome()">
             <NavLink href="/" class="nav-link" Match="NavLinkMatch.All">
@@ -255,6 +276,7 @@
     }
 
     private void NavigateToHome() => Navigation.NavigateTo("/");
+    private void NavigateToDashboard() => Navigation.NavigateTo("/");
     private void NavigateToCounter() => Navigation.NavigateTo("/counter");
     private void NavigateToProducts() => Navigation.NavigateTo("/products");
     private void NavigateToCategories() => Navigation.NavigateTo("/categories");
