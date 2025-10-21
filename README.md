@@ -1,66 +1,79 @@
 # Blazor CRUD Demo
 
-A comprehensive Blazor Server application demonstrating CRUD (Create, Read, Update, Delete) operations with a clean, modern UI. This project showcases best practices for building data-driven web applications using .NET and Blazor.
+A comprehensive Blazor Server application demonstrating CRUD (Create, Read, Update, Delete) operations with a modern, responsive UI. This project showcases best practices for building data-driven web applications using .NET 8 and Blazor Server.
 
-![Blazor CRUD Demo](https://img.shields.io/badge/Blazor-5C2D91?logo=blazor&logoColor=white) ![.NET](https://img.shields.io/badge/.NET-5C2D91?logo=.net&logoColor=white) ![C#](https://img.shields.io/badge/C%23-239120?logo=c-sharp&logoColor=white)
+![Blazor CRUD Demo](https://img.shields.io/badge/Blazor-5C2D91?logo=blazor&logoColor=white) ![.NET](https://img.shields.io/badge/.NET_8-5C2D91?logo=.net&logoColor=white) ![C#](https://img.shields.io/badge/C%23-239120?logo=c-sharp&logoColor=white) ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 
 ## Features
 
-- **Product Management**
-  - Create, Read, Update, and Delete products
-  - Product search and filtering
-  - Category-based organization
-  - Image upload support
+### Dashboard
+- Real-time statistics and metrics display
+- Recent activity feed with timestamps
+- Quick action buttons for common tasks
+- Responsive design for all screen sizes
 
-- **Dashboard**
-  - Real-time statistics and metrics
-  - Activity feed
-  - Quick actions
-
-- **Advanced Search**
-  - Multi-category filtering
+### Product Management
+- Complete CRUD Operations: Create, Read, Update, Delete products
+- Advanced Search & Filtering:
+  - Multi-category filtering with checkboxes
   - Price range sliders
   - Date range selection
-  - Tag-based filtering
+  - Tag-based filtering system
+- Image Upload Support: Product image management
+- Category Organization: Hierarchical product categorization
 
-- **Responsive Design**
-  - Works on desktop and mobile devices
-  - Clean, modern UI with Bootstrap 5
-  - Font Awesome icons
+### Category Management
+- Full category CRUD operations
+- Hierarchical category structure
+- Category-based product organization
+
+### Advanced Search System
+- Multi-Filter Support: Combine multiple search criteria
+- Real-time Filtering: Instant results as you type
+- Tag System: Advanced tagging for products
+- Responsive Search UI: Works seamlessly on all devices
+
+### Technical Features
+- Error Handling: Comprehensive error boundaries and user-friendly error pages
+- Logging: Structured logging with Serilog
+- Background Services: Automated maintenance, cache cleanup, and data synchronization
+- Middleware: Request/response logging and global exception handling
+- Responsive Design: Bootstrap 5 with mobile-first approach
+- Real-time Updates: SignalR integration for live data updates
 
 ## Prerequisites
 
 - [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- [Visual Studio 2022](https://visualstudio.microsoft.com/vs/) or [VS Code](https://code.visualstudio.com/)
-- [SQL Server](https://www.microsoft.com/en-us/sql-server/sql-server-downloads) (LocalDB or full version)
+- [Visual Studio 2022](https://visualstudio.microsoft.com/vs/), [VS Code](https://code.visualstudio.com/), or any .NET IDE
+- No external database required (uses SQLite)
 
 ## Getting Started
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/edogola4/BlazorCrudDemo.git
-   cd BlazorCrudDemo
-   ```
+### 1. Clone the repository
+```bash
+git clone https://github.com/edogola4/BlazorCrudDemo.git
+cd BlazorCrudDemo
+```
 
-2. **Configure the database**
-   - Update the connection string in `appsettings.json` to point to your SQL Server instance
-   - Run the database migrations:
-     ```bash
-     cd BlazorCrudDemo.Data
-     dotnet ef database update
-     ```
+### 2. Database Setup
+The application uses SQLite with automatic database creation and migrations:
 
-3. **Run the application**
-   ```bash
-   cd BlazorCrudDemo.Web
-   dotnet watch run
-   ```
+```bash
+cd BlazorCrudDemo.Web
+dotnet watch
+```
 
-4. **Access the application**
-   - Open a web browser and navigate to `https://localhost:5001`
-   - The default admin credentials are:
-     - Username: `admin@example.com`
-     - Password: `Admin@123`
+The database file (`blazorcrud.db`) will be created automatically in the `BlazorCrudDemo.Web` directory.
+
+### 3. Run the application
+```bash
+cd BlazorCrudDemo.Web
+dotnet watch
+```
+
+### 4. Access the application
+- Open your browser and navigate to `http://localhost:5120`
+- The dashboard will load with sample data for demonstration
 
 ## Project Structure
 
@@ -68,91 +81,135 @@ A comprehensive Blazor Server application demonstrating CRUD (Create, Read, Upda
 BlazorCrudDemo/
 ├── BlazorCrudDemo.Data/          # Data access layer
 │   ├── Configurations/          # Entity Framework configurations
-│   ├── Contexts/                # Database context
-│   └── Interfaces/              # Repository interfaces
+│   ├── Contexts/                # Database context & interceptors
+│   ├── Interfaces/              # Repository interfaces
+│   └── Repositories/            # Data repository implementations
 │
-├── BlazorCrudDemo.Shared/       # Shared models and DTOs
+├── BlazorCrudDemo.Shared/       # Shared models and utilities
 │   ├── DTOs/                   # Data Transfer Objects
-│   ├── Models/                 # Domain models
-│   └── Validators/             # FluentValidation validators
+│   ├── Models/                 # Domain models (Product, Category)
+│   ├── Validators/             # Input validation rules
+│   └── Exceptions/             # Custom exception types
 │
 └── BlazorCrudDemo.Web/          # Blazor Server application
+    ├── BackgroundServices/      # Automated background tasks
+    │   ├── CacheCleanupBackgroundService.cs
+    │   ├── DataSyncBackgroundService.cs
+    │   └── MaintenanceBackgroundService.cs
+    │
     ├── Components/             # Reusable UI components
-    │   ├── Dashboard/         # Dashboard components
-    │   ├── Layout/            # Layout components
-    │   ├── Products/          # Product-related components
-    │   └── Search/            # Search and filter components
+    │   ├── Categories/         # Category management components
+    │   ├── Dashboard/         # Dashboard widgets and charts
+    │   ├── Layout/            # Navigation and layout components
+    │   ├── Products/          # Product form and display components
+    │   ├── Search/            # Advanced search and filter components
+    │   └── Shared/            # Common UI elements
     │
-    ├── Pages/                  # Application pages
-    │   └── Products/          # Product management pages
+    ├── Hubs/                  # SignalR hubs for real-time features
+    │   └── NotificationHub.cs
     │
-    ├── Services/               # Application services
-    └── wwwroot/                # Static files
+    ├── Middleware/            # Custom middleware
+    │   ├── GlobalExceptionHandlerMiddleware.cs
+    │   └── RequestResponseLoggingMiddleware.cs
+    │
+    ├── Pages/                 # Application pages
+    │   ├── Categories.razor   # Category management page
+    │   ├── Dashboard/         # Main dashboard page
+    │   ├── Error.razor        # Error handling page
+    │   └── ProductListPage.razor # Product listing and search
+    │
+    ├── Services/              # Business logic services
+    │   ├── CategoryService.cs
+    │   ├── ProductService.cs
+    │   ├── NotificationService.cs
+    │   └── Error handling services
+    │
+    └── wwwroot/               # Static assets
+        ├── css/              # Stylesheets
+        ├── js/               # JavaScript files
+        └── lib/              # Third-party libraries
 ```
 
 ## Technologies Used
 
-- **Frontend**
-  - Blazor Server
-  - Bootstrap 5
-  - Font Awesome 6
-  - Syncfusion Blazor Components
-  - JavaScript Interop for client-side functionality
+### Frontend
+- Blazor Server - .NET web framework for interactive web UIs
+- Bootstrap 5 - Responsive CSS framework
+- Font Awesome 6 - Icon library
+- JavaScript Interop - Client-side functionality integration
 
-- **Backend**
-  - .NET 8.0
-  - Entity Framework Core 8.0
-  - ASP.NET Core Identity
-  - AutoMapper
-  - FluentValidation
+### Backend
+- .NET 8.0 - Cross-platform development framework
+- ASP.NET Core - Web framework for hosting and middleware
+- Entity Framework Core 8.0 - Object-relational mapping
+- SignalR - Real-time web functionality
+- AutoMapper - Object-to-object mapping
+- FluentValidation - Model validation
 
-- **Database**
-  - SQL Server
-  - Entity Framework Core Migrations
+### Database & Storage
+- SQLite - Lightweight, file-based database
+- Entity Framework Core Migrations - Database schema management
 
-## API Documentation
+### Development & Monitoring
+- Serilog - Structured logging
+- Background Services - Automated tasks and maintenance
+- Error Boundaries - Graceful error handling
+- Request/Response Logging - HTTP traffic monitoring
 
-The application exposes a RESTful API for programmatic access to the data. The API is documented using Swagger/OpenAPI.
+## Development
 
-To access the API documentation:
-1. Run the application
-2. Navigate to `/swagger`
+### Code Quality
+- Comprehensive error handling with custom middleware
+- Structured logging with detailed context information
+- Input validation using FluentValidation
+- Clean architecture with separation of concerns
 
-## Testing
-
-To run the unit tests:
-
-```bash
-dotnet test
-```
+### Performance
+- Efficient database queries with Entity Framework
+- Background services for maintenance tasks
+- Optimized component rendering and state management
 
 ## Deployment
 
-The application can be deployed to various hosting environments including:
-- Azure App Service
+The application can be deployed to various hosting environments:
+
+### Development Deployment
+```bash
+cd BlazorCrudDemo.Web
+dotnet publish -c Release
+```
+
+### Production Deployment Options
+- IIS (Windows)
+- Kestrel (Cross-platform)
 - Docker containers
-- IIS
-- Linux with Kestrel
+- Azure App Service
+- Linux hosting
 
 ### Docker Support
-
 ```bash
 # Build the Docker image
-docker build -t blazorcruddemo .
+docker build -t blazorcruddemo -f BlazorCrudDemo.Web/Dockerfile .
 
 # Run the container
-docker run -d -p 5000:80 --name blazor-app blazorcruddemo
+docker run -d -p 5120:80 --name blazor-app blazorcruddemo
 ```
 
 ## Contributing
 
-Contributions are welcome! Please follow these steps:
+Contributions are welcome! Here's how to get started:
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes with clear, descriptive commit messages
+4. Test your changes thoroughly
+5. Submit a pull request with a detailed description
+
+### Development Guidelines
+- Follow the existing code style and patterns
+- Add tests for new functionality
+- Update documentation for any new features
+- Ensure all tests pass before submitting
 
 ## License
 
@@ -162,18 +219,23 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [Blazor](https://dotnet.microsoft.com/apps/aspnet/web-apps/blazor) - .NET web framework
 - [Bootstrap](https://getbootstrap.com/) - CSS framework
-- [Syncfusion Blazor Components](https://www.syncfusion.com/blazor-components) - UI component library
 - [Font Awesome](https://fontawesome.com/) - Icon library
+- [Serilog](https://serilog.net/) - Logging framework
+- [SQLite](https://www.sqlite.org/) - Database engine
 
 ## Support
 
-If you encounter any issues or have questions, please [open an issue](https://github.com/edogola4/BlazorCrudDemo/issues).
+If you encounter any issues or have questions:
+
+- Check the [Wiki](https://github.com/edogola4/BlazorCrudDemo/wiki) for detailed documentation
+- [Report issues](https://github.com/edogola4/BlazorCrudDemo/issues) on GitHub
+- Start a [Discussion](https://github.com/edogola4/BlazorCrudDemo/discussions)
 
 ---
 
 <div align="center">
-  Made with ❤️ by Bran Don
-  <br>
+  <strong>Made with ❤️ by Bran Don</strong>
+  <br><br>
   <a href="https://twitter.com/intent/tweet?text=Check%20out%20this%20awesome%20Blazor%20CRUD%20demo!&url=https%3A%2F%2Fgithub.com%2Fedogola4%2FBlazorCrudDemo">
     <img src="https://img.shields.io/badge/Share_on_X-000000?style=for-the-badge&logo=x&logoColor=white" alt="Share on X">
   </a>
