@@ -26,7 +26,8 @@ public class CategoryRepository : BaseRepository<Category>, ICategoryRepository
     /// <inheritdoc />
     public override async Task<IEnumerable<Category>> GetAllAsync()
     {
-        return await base.GetAllAsync();
+        var categories = await base.GetAllAsync();
+        return categories ?? Enumerable.Empty<Category>();
     }
 
     /// <inheritdoc />
