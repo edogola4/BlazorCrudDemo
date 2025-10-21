@@ -59,7 +59,7 @@
     [Parameter] public EventCallback<IBrowserFile> OnImageUploaded { get; set; }
     [Parameter] public long MaxFileSize { get; set; } = 5 * 1024 * 1024; // 5MB
 
-    private ElementReference inputFile;
+    private ElementReference inputFile; // Reserved for programmatic file selection
     private bool IsDragOver { get; set; }
     private string _errorMessage = "";
 
