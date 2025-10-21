@@ -26,7 +26,8 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
     /// <inheritdoc />
     public override async Task<IEnumerable<Product>> GetAllAsync()
     {
-        return await base.GetAllAsync(p => p.Category);
+        var products = await base.GetAllAsync(p => p.Category);
+        return products ?? Enumerable.Empty<Product>();
     }
 
     /// <inheritdoc />
