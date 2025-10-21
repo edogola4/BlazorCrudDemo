@@ -17,17 +17,24 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
         // [Inject] private IDashboardService DashboardService { get; set; } = default!;
         // [Inject] private IActivityService ActivityService { get; set; } = default!;
         [Inject] private IJSRuntime JS { get; set; } = default!;
+        [Inject] private NavigationManager Navigation { get; set; } = default!;
 
         private bool isLoading = true;
         private bool hasError = false;
+        private string searchQuery = string.Empty;
+        private string selectedFilter = "all";
 #pragma warning disable CS0414 // Field is assigned but never used
         private string? errorMessage;
 #pragma warning restore CS0414
         private bool showSidebar = true;
         
-        // Data models
-        private DashboardStats stats = new();
-        private List<ActivityItem> recentActivities = new();
+        // Filtered activities for search and filter functionality
+        private IQueryable<ActivityItem> FilteredActivities => recentActivities.AsQueryable()
+            .Where(a => string.IsNullOrEmpty(searchQuery) ||
+                   a.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                   a.Description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                   a.Type.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
+            .Where(a => selectedFilter == "all" || a.Type.Contains(selectedFilter.Replace("s", "").Replace("orders", "order").Replace("categories", "category")));
         
         // Last refresh timestamp
         private DateTime lastRefreshed;
@@ -264,6 +271,32 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
                 isLoading = false;
                 await InvokeAsync(StateHasChanged);
             }
+        }
+
+        private void NavigateToAddProduct()
+        {
+            Navigation.NavigateTo("/products/add");
+        }
+
+        private void NavigateToAddCategory()
+        {
+            Navigation.NavigateTo("/categories/add");
+        }
+
+        private void NavigateToReports()
+        {
+            Navigation.NavigateTo("/reports");
+        }
+
+        private void NavigateToSettings()
+        {
+            Navigation.NavigateTo("/settings");
+        }
+
+        private void ClearSearch()
+        {
+            searchQuery = string.Empty;
+            selectedFilter = "all";
         }
 
         private string GetActivityIcon(string activityType)
