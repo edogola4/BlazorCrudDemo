@@ -1,0 +1,137 @@
+@using Microsoft.AspNetCore.Components.Web
+@using Serilog
+
+<div class="error-boundary">
+    @if (HasError)
+    {
+        <!-- Error State -->
+        <div class="error-boundary-content">
+            <div class="error-boundary-icon">
+                <i class="fas fa-exclamation-triangle text-warning"></i>
+            </div>
+
+            <div class="error-boundary-message">
+                <h4>@ErrorTitle</h4>
+                <p>@ErrorMessage</p>
+            </div>
+
+            <div class="error-boundary-actions">
+                <button class="btn btn-primary btn-sm" @onclick="TryAgain">
+                    <i class="fas fa-redo me-1"></i>Try Again
+                </button>
+
+                @if (ShowReportButton)
+                {
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="ReportError">
+                        <i class="fas fa-bug me-1"></i>Report
+                    </button>
+                }
+
+                @if (ShowDetails && IsDevelopment)
+                {
+                    <button class="btn btn-outline-info btn-sm" @onclick="ToggleDetails">
+                        <i class="fas fa-info-circle me-1"></i>Hide Details
+                    </button>
+                }
+                else if (IsDevelopment)
+                {
+                    <button class="btn btn-outline-info btn-sm" @onclick="ToggleDetails">
+                        <i class="fas fa-info-circle me-1"></i>Show Details
+                    </button>
+                }
+            </div>
+
+            @if (ShowDetails && IsDevelopment && LastError != null)
+            {
+                <div class="error-boundary-details">
+                    <div class="error-details-header">
+                        <strong>Error Details (Development Mode)</strong>
+                    </div>
+                    <div class="error-stack-trace">
+                        <strong>Message:</strong> @LastError.Message
+                        <br />
+                        <strong>Source:</strong> @LastError.Source
+                        <br />
+                        <strong>Stack Trace:</strong>
+                        <pre>@LastError.StackTrace</pre>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <!-- Normal Content -->
+        <CascadingValue Value="this" IsFixed="true">
+            @ChildContent
+        </CascadingValue>
+    }
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public string ErrorTitle { get; set; } = "Something went wrong";
+    [Parameter] public string ErrorMessage { get; set; } = "An unexpected error occurred while loading this component.";
+    [Parameter] public bool ShowReportButton { get; set; } = true;
+    [Parameter] public EventCallback<Exception> OnError { get; set; }
+
+    private bool HasError { get; set; }
+    private Exception? LastError { get; set; }
+    private bool ShowDetails { get; set; }
+
+    private bool IsDevelopment => Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
+
+    // For Blazor Server Side, we use a different approach
+    // The error boundary will catch errors through JavaScript interop or service injection
+    public void HandleError(Exception exception)
+    {
+        HasError = true;
+        LastError = exception;
+        ShowDetails = false;
+
+        // Log the error
+        Log.Error(exception, "Error boundary caught exception: {Message}", exception.Message);
+
+        // Invoke the OnError callback if provided
+        if (OnError.HasDelegate)
+        {
+            OnError.InvokeAsync(exception);
+        }
+
+        StateHasChanged();
+    }
+
+    private void TryAgain()
+    {
+        HasError = false;
+        LastError = null;
+        ShowDetails = false;
+        StateHasChanged();
+    }
+
+    private void ReportError()
+    {
+        if (LastError != null)
+        {
+            // Create a simple error report
+            var report = $"Error Report:\n" +
+                        $"Time: {DateTime.Now}\n" +
+                        $"Component: {GetType().Name}\n" +
+                        $"Message: {LastError.Message}\n" +
+                        $"Source: {LastError.Source}\n" +
+                        $"Stack Trace: {LastError.StackTrace}";
+
+            // Copy to clipboard (JavaScript interop would be needed for actual clipboard)
+            Log.Information("Error reported by user: {Report}", report);
+
+            // Show a toast notification (you can integrate with your toast service)
+            // For now, just log it
+        }
+    }
+
+    private void ToggleDetails()
+    {
+        ShowDetails = !ShowDetails;
+        StateHasChanged();
+    }
+}
