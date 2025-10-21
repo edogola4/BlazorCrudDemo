@@ -9,6 +9,11 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeCharts() {
+    // Destroy existing charts to prevent canvas reuse errors
+    Object.values(Chart.instances).forEach(instance => {
+        instance.destroy();
+    });
+
     // Sales Activity Chart (Line Chart)
     const salesCtx = document.getElementById('salesChart');
     if (salesCtx) {
