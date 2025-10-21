@@ -11,7 +11,7 @@
 
         <!-- Breadcrumb (simplified for demo) -->
         <div class="breadcrumb-simple">
-            <span class="breadcrumb-item">Dashboard</span>
+            <span class="breadcrumb-item">Home</span>
         </div>
     </div>
 
@@ -37,23 +37,14 @@
     </div>
 
     <div class="top-bar-right">
-        <!-- Quick Actions -->
-        <div class="quick-actions">
-            <button class="action-btn" @onclick="HandleQuickAction" title="Quick Action">
-                <i class="bi bi-lightning-charge"></i>
-                @if (!IsMobile)
-                {
-                    <span>Quick</span>
-                }
-            </button>
-            <button class="action-btn" @onclick="HandleNewItem" title="New Item">
-                <i class="bi bi-plus-circle"></i>
-                @if (!IsMobile)
-                {
-                    <span>New</span>
-                }
-            </button>
-        </div>
+        <!-- + New Button -->
+        <button class="new-btn" @onclick="HandleNewItem" title="New">
+            <i class="bi bi-plus"></i>
+            @if (!IsMobile)
+            {
+                <span>New</span>
+            }
+        </button>
 
         <!-- Notifications -->
         <div class="notification-container">
@@ -67,30 +58,24 @@
         </div>
 
         <!-- Settings -->
-        <div class="settings-container">
-            <button class="settings-btn" @onclick="ToggleSettings" title="Settings">
-                <i class="bi bi-gear"></i>
-            </button>
-        </div>
+        <button class="settings-btn" @onclick="ToggleSettings" title="Settings">
+            <i class="bi bi-gear"></i>
+        </button>
 
         <!-- Theme Toggle -->
-        <div class="theme-toggle">
-            <button class="theme-btn @(IsDarkMode ? "dark" : "light")" @onclick="ToggleTheme" title="@(IsDarkMode ? "Light Mode" : "Dark Mode")">
-                <i class="bi @(IsDarkMode ? "bi-sun" : "bi-moon")"></i>
-            </button>
-        </div>
+        <button class="theme-btn @(IsDarkMode ? "dark" : "light")" @onclick="ToggleTheme" title="@(IsDarkMode ? "Light Mode" : "Dark Mode")">
+            <i class="bi @(IsDarkMode ? "bi-sun" : "bi-moon")"></i>
+        </button>
 
         <!-- Fullscreen Toggle -->
-        <div class="fullscreen-toggle">
-            <button class="fullscreen-btn" @onclick="ToggleFullscreen" title="@(IsFullscreen ? "Exit Fullscreen" : "Enter Fullscreen")">
-                <i class="bi @(IsFullscreen ? "bi-fullscreen-exit" : "bi-arrows-fullscreen")"></i>
-            </button>
-        </div>
+        <button class="fullscreen-btn" @onclick="ToggleFullscreen" title="@(IsFullscreen ? "Exit Fullscreen" : "Enter Fullscreen")">
+            <i class="bi @(IsFullscreen ? "bi-fullscreen-exit" : "bi-arrows-fullscreen")"></i>
+        </button>
 
         <!-- User Dropdown -->
         <div class="user-dropdown-container">
             <button class="user-dropdown-btn" @onclick="ToggleUserDropdown" title="User Menu">
-                <div class="user-avatar-small">
+                <div class="user-avatar">
                     <i class="bi bi-person-circle"></i>
                 </div>
                 <span class="user-name">Bran Don</span>
@@ -208,8 +193,8 @@
         align-items: center;
         justify-content: space-between;
         height: 60px;
-        background: var(--topbar-bg, white);
-        border-bottom: 1px solid var(--border-color, #e5e7eb);
+        background: #1e3a8a; /* Dark navy blue */
+        border-bottom: 1px solid #1e40af;
         padding: 0 1rem;
         position: sticky;
         top: 0;
@@ -239,7 +224,7 @@
         display: none;
         background: none;
         border: none;
-        color: var(--text-color, #374151);
+        color: white;
         font-size: 1.25rem;
         padding: 0.5rem;
         border-radius: 0.375rem;
@@ -248,13 +233,13 @@
     }
 
     .mobile-menu-btn:hover {
-        background-color: var(--hover-bg, #f3f4f6);
+        background-color: rgba(255, 255, 255, 0.1);
     }
 
     /* Breadcrumb */
     .breadcrumb-simple {
         font-size: 0.875rem;
-        color: var(--text-muted, #6b7280);
+        color: rgba(255, 255, 255, 0.8);
     }
 
     /* Search */
@@ -266,20 +251,20 @@
         position: relative;
         display: flex;
         align-items: center;
-        background: var(--search-bg, #f9fafb);
-        border: 1px solid var(--border-color, #d1d5db);
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 0.5rem;
         padding: 0.5rem 1rem;
         transition: all 0.2s ease;
     }
 
     .search-input-wrapper:focus-within {
-        border-color: var(--primary-color, #3b82f6);
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        border-color: rgba(255, 255, 255, 0.5);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
     }
 
     .search-icon {
-        color: var(--text-muted, #6b7280);
+        color: rgba(255, 255, 255, 0.8);
         margin-right: 0.5rem;
         font-size: 0.875rem;
     }
@@ -290,17 +275,17 @@
         outline: none;
         background: transparent;
         font-size: 0.875rem;
-        color: var(--text-color, #374151);
+        color: white;
     }
 
     .search-input::placeholder {
-        color: var(--text-muted, #6b7280);
+        color: rgba(255, 255, 255, 0.6);
     }
 
     .search-clear-btn {
         background: none;
         border: none;
-        color: var(--text-muted, #6b7280);
+        color: rgba(255, 255, 255, 0.8);
         cursor: pointer;
         padding: 0.25rem;
         border-radius: 50%;
@@ -309,53 +294,33 @@
     }
 
     .search-clear-btn:hover {
-        color: var(--text-color, #374151);
+        color: white;
     }
 
-    /* Quick Actions */
-    .quick-actions {
+    /* Buttons */
+    .new-btn, .notification-btn, .settings-btn, .theme-btn, .fullscreen-btn {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.125rem;
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
         display: flex;
+        align-items: center;
         gap: 0.5rem;
     }
 
-    .action-btn {
-        background: none;
-        border: none;
-        color: var(--text-muted, #6b7280);
-        font-size: 1.125rem;
-        padding: 0.5rem;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
+    .new-btn:hover, .notification-btn:hover, .settings-btn:hover, .theme-btn:hover, .fullscreen-btn:hover {
+        background-color: rgba(255, 255, 255, 0.1);
     }
 
-    .action-btn:hover {
-        background-color: var(--hover-bg, #f3f4f6);
-        color: var(--primary-color, #3b82f6);
+    .theme-btn.dark {
+        color: #fbbf24;
     }
 
     /* Notifications */
-    .notification-container {
-        position: relative;
-    }
-
-    .notification-btn {
-        position: relative;
-        background: none;
-        border: none;
-        color: var(--text-muted, #6b7280);
-        font-size: 1.125rem;
-        padding: 0.5rem;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .notification-btn:hover {
-        background-color: var(--hover-bg, #f3f4f6);
-        color: var(--primary-color, #3b82f6);
-    }
-
     .notification-badge {
         position: absolute;
         top: 0;
@@ -371,61 +336,6 @@
         line-height: 1;
     }
 
-    /* Settings */
-    .settings-btn {
-        background: none;
-        border: none;
-        color: var(--text-muted, #6b7280);
-        font-size: 1.125rem;
-        padding: 0.5rem;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .settings-btn:hover {
-        background-color: var(--hover-bg, #f3f4f6);
-        color: var(--primary-color, #3b82f6);
-    }
-
-    /* Theme Toggle */
-    .theme-btn {
-        background: none;
-        border: none;
-        color: var(--text-muted, #6b7280);
-        font-size: 1.125rem;
-        padding: 0.5rem;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .theme-btn:hover {
-        background-color: var(--hover-bg, #f3f4f6);
-        color: var(--primary-color, #3b82f6);
-    }
-
-    .theme-btn.dark {
-        color: #fbbf24;
-    }
-
-    /* Fullscreen Toggle */
-    .fullscreen-btn {
-        background: none;
-        border: none;
-        color: var(--text-muted, #6b7280);
-        font-size: 1.125rem;
-        padding: 0.5rem;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .fullscreen-btn:hover {
-        background-color: var(--hover-bg, #f3f4f6);
-        color: var(--primary-color, #3b82f6);
-    }
-
     /* User Dropdown */
     .user-dropdown-container {
         position: relative;
@@ -436,24 +346,24 @@
         align-items: center;
         gap: 0.5rem;
         background: none;
-        border: 1px solid var(--border-color, #d1d5db);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 0.5rem;
         padding: 0.5rem 0.75rem;
         cursor: pointer;
         transition: all 0.2s ease;
-        color: var(--text-color, #374151);
+        color: white;
     }
 
     .user-dropdown-btn:hover {
-        background-color: var(--hover-bg, #f3f4f6);
-        border-color: var(--primary-color, #3b82f6);
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.5);
     }
 
-    .user-avatar-small {
+    .user-avatar {
         width: 24px;
         height: 24px;
         border-radius: 50%;
-        background: var(--primary-color, #3b82f6);
+        background: rgba(255, 255, 255, 0.2);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -481,7 +391,7 @@
         right: 0;
         min-width: 200px;
         background: white;
-        border: 1px solid var(--border-color, #e5e7eb);
+        border: 1px solid #e5e7eb;
         border-radius: 0.5rem;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         z-index: 1000;
@@ -490,7 +400,7 @@
 
     .dropdown-header {
         padding: 1rem;
-        border-bottom: 1px solid var(--border-color, #e5e7eb);
+        border-bottom: 1px solid #e5e7eb;
     }
 
     .user-info {
@@ -499,18 +409,18 @@
 
     .user-name {
         font-weight: 600;
-        color: var(--text-color, #374151);
+        color: #374151;
         margin-bottom: 0.25rem;
     }
 
     .user-email {
         font-size: 0.875rem;
-        color: var(--text-muted, #6b7280);
+        color: #6b7280;
     }
 
     .dropdown-divider {
         height: 1px;
-        background: var(--border-color, #e5e7eb);
+        background: #e5e7eb;
         margin: 0.5rem 0;
     }
 
@@ -518,14 +428,14 @@
         display: flex;
         align-items: center;
         padding: 0.75rem 1rem;
-        color: var(--text-color, #374151);
+        color: #374151;
         text-decoration: none;
         font-size: 0.875rem;
         transition: background-color 0.2s ease;
     }
 
     .dropdown-item:hover {
-        background-color: var(--hover-bg, #f3f4f6);
+        background-color: #f3f4f6;
     }
 
     .dropdown-item.text-danger {
@@ -535,29 +445,5 @@
     .dropdown-item.text-danger:hover {
         background-color: #fef2f2;
         color: #dc2626;
-    }
-
-    /* Dark Theme */
-    .dark-theme .top-bar {
-        background: var(--topbar-bg-dark, #374151);
-        border-bottom-color: var(--border-color-dark, #4b5563);
-    }
-
-    .dark-theme .search-input-wrapper {
-        background: var(--search-bg-dark, #4b5563);
-        border-color: var(--border-color-dark, #4b5563);
-    }
-
-    .dark-theme .user-dropdown-menu {
-        background: var(--dropdown-bg-dark, #374151);
-        border-color: var(--border-color-dark, #4b5563);
-    }
-
-    .dark-theme .dropdown-item {
-        color: var(--text-color-dark, #f9fafb);
-    }
-
-    .dark-theme .dropdown-item:hover {
-        background-color: var(--hover-bg-dark, #4b5563);
     }
 </style>
