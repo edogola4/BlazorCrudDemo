@@ -4,9 +4,9 @@ namespace BlazorCrudDemo.Shared.Exceptions
 {
     public class DuplicateEntityException : Exception
     {
-        public string EntityType { get; }
-        public string FieldName { get; }
-        public string DuplicateValue { get; }
+        public string? EntityType { get; }
+        public string? FieldName { get; }
+        public string? DuplicateValue { get; }
 
         public DuplicateEntityException() { }
 
