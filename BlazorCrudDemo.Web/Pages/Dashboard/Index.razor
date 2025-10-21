@@ -1,5 +1,6 @@
 @page "/"
 @page "/dashboard"
+@using BlazorCrudDemo.Web.Components.Layout
 @using BlazorCrudDemo.Web.Components.Dashboard
 @using BlazorCrudDemo.Web.Models
 @using System.Globalization
@@ -7,615 +8,367 @@
 
 <PageTitle>Dashboard</PageTitle>
 
+<!-- Dashboard content now works within MainLayout structure -->
 <div class="dashboard-container">
-    <!-- Enhanced Header with Gradient Background -->
-    <div class="dashboard-header-enhanced">
-        <div class="header-content">
-            <div class="header-title">
-                <h1 class="dashboard-title">
-                    <i class="fas fa-tachometer-alt me-3"></i>
-                    Dashboard Overview
-                </h1>
-                <p class="dashboard-subtitle">Real-time business insights and analytics</p>
-            </div>
-            <div class="header-actions">
-                <button class="btn btn-refresh" @onclick="RefreshDashboard">
-                    <i class="fas fa-sync-alt me-2"></i>
-                    <span>Refresh Data</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    @if (isLoading)
-    {
-        <div class="loading-container">
-            <div class="loading-spinner"></div>
-            <div class="loading-text">
-                <h4>Loading Dashboard Data...</h4>
-                <p>Fetching latest statistics and activities</p>
-            </div>
-        </div>
-    }
-    else if (hasError)
-    {
-        <div class="error-container-enhanced">
-            <div class="error-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <div class="error-content">
-                <h3>Unable to Load Dashboard</h3>
-                <p>There was an issue retrieving your dashboard data. This might be a temporary network issue.</p>
-                <div class="error-actions">
-                    <button class="btn btn-primary" @onclick="RefreshDashboard">
-                        <i class="fas fa-redo me-2"></i>Try Again
-                    </button>
-                    <button class="btn btn-secondary">
-                        <i class="fas fa-home me-2"></i>Go to Home
-                    </button>
-                </div>
-            </div>
-        </div>
-    }
-    else
-    {
-        <!-- Stats Cards Section -->
-        <div class="stats-section">
-            <div class="section-header">
-                <h2 class="section-title">Key Metrics</h2>
-                <p class="section-description">Current business performance indicators</p>
-            </div>
-
-            <div class="stats-grid-enhanced">
-                <div class="stat-card-enhanced products-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-box"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-value">@stats.TotalProducts.ToString("N0")</div>
-                        <div class="stat-label">Total Products</div>
-                        <div class="stat-trend trend-up">
-                            <i class="fas fa-arrow-up me-1"></i>
-                            <span>@Math.Abs(stats.ProductsTrend)%</span>
+    <div class="dashboard-content">
+        @if (isLoading)
+        {
+            <!-- Loading Skeleton -->
+            <div class="loading-container">
+                <div class="skeleton-grid">
+                    @for (int i = 0; i < 4; i++)
+                    {
+                        <div class="skeleton-card">
+                            <div class="skeleton-header"></div>
+                            <div class="skeleton-body"></div>
+                            <div class="skeleton-footer"></div>
                         </div>
-                    </div>
+                    }
                 </div>
-
-                <div class="stat-card-enhanced categories-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-folder"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-value">@stats.TotalCategories.ToString("N0")</div>
-                        <div class="stat-label">Categories</div>
-                        <div class="stat-trend trend-up">
-                            <i class="fas fa-arrow-up me-1"></i>
-                            <span>@Math.Abs(stats.CategoriesTrend)%</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stat-card-enhanced stock-card">
-                    <div class="stat-icon warning">
+            </div>
+        }
+        else if (hasError)
+        {
+            <!-- Error State -->
+            <div class="error-container">
+                <div class="error-card">
+                    <div class="error-icon" aria-hidden="true">
                         <i class="fas fa-exclamation-triangle"></i>
                     </div>
-                    <div class="stat-content">
-                        <div class="stat-value">@stats.LowStockItems.ToString("N0")</div>
-                        <div class="stat-label">Low Stock Items</div>
-                        <div class="stat-trend @(stats.LowStockTrend <= 0 ? "trend-down" : "trend-up")">
-                            <i class="fas fa-arrow-@(stats.LowStockTrend <= 0 ? "down" : "up") me-1"></i>
-                            <span>@Math.Abs(stats.LowStockTrend)%</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stat-card-enhanced revenue-card">
-                    <div class="stat-icon success">
-                        <i class="fas fa-dollar-sign"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-value">@stats.TotalInventoryValue.ToString("C0")</div>
-                        <div class="stat-label">Inventory Value</div>
-                        <div class="stat-trend trend-up">
-                            <i class="fas fa-arrow-up me-1"></i>
-                            <span>@Math.Abs(stats.InventoryValueTrend)%</span>
-                        </div>
+                    <h3>Unable to Load Dashboard</h3>
+                    <p>We encountered an issue while fetching your data. Please try again.</p>
+                    <div class="error-actions">
+                        <button class="btn btn-primary" @onclick="RefreshDashboard" aria-label="Retry loading dashboard">
+                            <i class="fas fa-redo" aria-hidden="true"></i>
+                            <span>Try Again</span>
+                        </button>
+                        <button class="btn btn-secondary">
+                            <i class="fas fa-home" aria-hidden="true"></i>
+                            <span>Go Home</span>
+                        </button>
                     </div>
                 </div>
             </div>
-        </div>
+        }
+        else
+        {
+            <!-- Main Dashboard Layout -->
+            <div class="dashboard-layout">
+                <!-- Stats Overview -->
+                <section class="stats-section" aria-labelledby="stats-heading">
+                    <h2 id="stats-heading" class="section-title">Key Metrics</h2>
+                    <div class="stats-grid">
+                        <!-- Total Products Card -->
+                        <div class="stat-card card-primary" tabindex="0" role="button">
+                            <div class="stat-card-bg"></div>
+                            <div class="stat-header">
+                                <div class="stat-icon-wrapper">
+                                    <i class="fas fa-box" aria-hidden="true"></i>
+                                </div>
+                                <div class="stat-trend @(stats.ProductsTrend >= 0 ? "trend-positive" : "trend-negative")">
+                                    <i class="fas fa-arrow-@(stats.ProductsTrend >= 0 ? "up" : "down")" aria-hidden="true"></i>
+                                    <span>@Math.Abs(stats.ProductsTrend)%</span>
+                                </div>
+                            </div>
+                            <div class="stat-body">
+                                <h3 class="stat-value">@stats.TotalProducts.ToString("N0")</h3>
+                                <p class="stat-label">Total Products</p>
+                            </div>
+                            <div class="stat-footer">
+                                <span class="stat-meta">
+                                    <i class="fas fa-info-circle" aria-hidden="true"></i>
+                                    Active inventory
+                                </span>
+                            </div>
+                        </div>
 
-        <!-- Main Content Grid -->
-        <div class="dashboard-grid">
-            <!-- Recent Activities Section -->
-            <div class="activities-section">
-                <div class="content-card">
-                    <div class="card-header-enhanced">
-                        <div class="card-title-section">
-                            <i class="fas fa-clock me-2"></i>
-                            <h3>Recent Activities</h3>
+                        <!-- Total Categories Card -->
+                        <div class="stat-card card-warning">
+                            <div class="stat-card-bg"></div>
+                            <div class="stat-header">
+                                <div class="stat-icon-wrapper">
+                                    <i class="fas fa-folder" aria-hidden="true"></i>
+                                </div>
+                                <div class="stat-trend @(stats.CategoriesTrend >= 0 ? "trend-positive" : "trend-negative")">
+                                    <i class="fas fa-arrow-@(stats.CategoriesTrend >= 0 ? "up" : "down")" aria-hidden="true"></i>
+                                    <span>@Math.Abs(stats.CategoriesTrend)%</span>
+                                </div>
+                            </div>
+                            <div class="stat-body">
+                                <h3 class="stat-value">@stats.TotalCategories.ToString("N0")</h3>
+                                <p class="stat-label">Categories</p>
+                            </div>
+                            <div class="stat-footer">
+                                <span class="stat-meta">
+                                    <i class="fas fa-info-circle" aria-hidden="true"></i>
+                                    Product groups
+                                </span>
+                            </div>
                         </div>
-                        <div class="card-actions">
-                            <button class="btn btn-sm btn-outline">
-                                <i class="fas fa-eye me-1"></i>View All
-                            </button>
+
+                        <!-- Recent Activity Card -->
+                        <div class="stat-card card-danger">
+                            <div class="stat-card-bg"></div>
+                            <div class="stat-header">
+                                <div class="stat-icon-wrapper">
+                                    <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                                </div>
+                                <div class="stat-trend @(stats.LowStockTrend <= 0 ? "trend-positive" : "trend-negative")">
+                                    <i class="fas fa-arrow-@(stats.LowStockTrend <= 0 ? "down" : "up")" aria-hidden="true"></i>
+                                    <span>@Math.Abs(stats.LowStockTrend)%</span>
+                                </div>
+                            </div>
+                            <div class="stat-body">
+                                <h3 class="stat-value">@stats.LowStockItems.ToString("N0")</h3>
+                                <p class="stat-label">Low Stock Alert</p>
+                            </div>
+                            <div class="stat-footer">
+                                <span class="stat-meta">
+                                    <i class="fas fa-info-circle" aria-hidden="true"></i>
+                                    Needs attention
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Inventory Value Card -->
+                        <div class="stat-card card-success">
+                            <div class="stat-card-bg"></div>
+                            <div class="stat-header">
+                                <div class="stat-icon-wrapper">
+                                    <i class="fas fa-dollar-sign" aria-hidden="true"></i>
+                                </div>
+                                <div class="stat-trend @(stats.InventoryValueTrend >= 0 ? "trend-positive" : "trend-negative")">
+                                    <i class="fas fa-arrow-@(stats.InventoryValueTrend >= 0 ? "up" : "down")" aria-hidden="true"></i>
+                                    <span>@Math.Abs(stats.InventoryValueTrend)%</span>
+                                </div>
+                            </div>
+                            <div class="stat-body">
+                                <h3 class="stat-value">@stats.TotalInventoryValue.ToString("C0")</h3>
+                                <p class="stat-label">Inventory Value</p>
+                            </div>
+                            <div class="stat-footer">
+                                <span class="stat-meta">
+                                    <i class="fas fa-info-circle" aria-hidden="true"></i>
+                                    Total worth
+                                </span>
+                            </div>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <ActivityFeed Activities="recentActivities" />
+                </section>
+
+                <!-- Charts Section -->
+                <section class="charts-section" aria-labelledby="charts-heading">
+                    <h2 id="charts-heading" class="section-title">Analytics & Insights</h2>
+                    <div class="charts-grid">
+                        <!-- Sales/Activity Chart -->
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <div class="chart-title-group">
+                                    <div class="chart-icon">
+                                        <i class="fas fa-chart-line" aria-hidden="true"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="chart-title">Sales Activity</h3>
+                                        <p class="chart-subtitle">Daily orders over the last 30 days</p>
+                                    </div>
+                                </div>
+                                <div class="chart-actions">
+                                    <select class="chart-period-select">
+                                        <option value="7">Last 7 days</option>
+                                        <option value="30" selected>Last 30 days</option>
+                                        <option value="90">Last 90 days</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="salesChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Category Distribution Chart -->
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <div class="chart-title-group">
+                                    <div class="chart-icon">
+                                        <i class="fas fa-chart-pie" aria-hidden="true"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="chart-title">Category Distribution</h3>
+                                        <p class="chart-subtitle">Product breakdown by category</p>
+                                    </div>
+                                </div>
+                                <div class="chart-legend">
+                                    <div class="legend-item">
+                                        <span class="legend-color" style="background-color: #3b82f6;"></span>
+                                        <span class="legend-label">Electronics</span>
+                                        <span class="legend-value">45%</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="legend-color" style="background-color: #10b981;"></span>
+                                        <span class="legend-label">Home & Garden</span>
+                                        <span class="legend-value">25%</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="legend-color" style="background-color: #f59e0b;"></span>
+                                        <span class="legend-label">Fashion</span>
+                                        <span class="legend-value">20%</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="legend-color" style="background-color: #ef4444;"></span>
+                                        <span class="legend-label">Sports</span>
+                                        <span class="legend-value">10%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="categoryChart" width="400" height="200"></canvas>
+                            </div>
+                        </div>
                     </div>
+                </section>
+
+                <!-- Content Grid -->
+                <div class="content-grid">
+                    <!-- Recent Activities -->
+                    <section class="activities-section" aria-labelledby="activities-heading">
+                        <div class="content-card">
+                            <div class="card-header">
+                                <div class="card-title-group">
+                                    <div class="card-icon">
+                                        <i class="fas fa-clock" aria-hidden="true"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="card-title" id="activities-heading">Recent Activities</h3>
+                                        <p class="card-subtitle">Latest system events</p>
+                                    </div>
+                                </div>
+                                <button class="btn-link" aria-label="View all activities">
+                                    <span>View All</span>
+                                    <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="activity-feed">
+                                    @foreach (var activity in recentActivities.Take(6))
+                                    {
+                                        <div class="activity-item">
+                                            <div class="activity-avatar">
+                                                <i class="fas fa-@(GetActivityIcon(activity.Type))" aria-hidden="true"></i>
+                                            </div>
+                                            <div class="activity-content">
+                                                <div class="activity-title">@activity.Title</div>
+                                                <div class="activity-description">@activity.Description</div>
+                                                <div class="activity-time">@GetRelativeTime(activity.Timestamp)</div>
+                                            </div>
+                                            <div class="activity-badge">
+                                                <span class="badge badge-@(GetActivityBadgeType(activity.Type))">
+                                                    @GetActivityBadgeText(activity.Type)
+                                                </span>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Quick Actions Sidebar -->
+                    <aside class="sidebar-section" aria-labelledby="actions-heading">
+                        <div class="content-card">
+                            <div class="card-header">
+                                <div class="card-title-group">
+                                    <div class="card-icon">
+                                        <i class="fas fa-bolt" aria-hidden="true"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="card-title" id="actions-heading">Quick Actions</h3>
+                                        <p class="card-subtitle">Common tasks</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="quick-actions">
+                                    <button class="action-btn primary">
+                                        <i class="fas fa-plus" aria-hidden="true"></i>
+                                        <span>Add Product</span>
+                                    </button>
+                                    <button class="action-btn primary">
+                                        <i class="fas fa-folder-plus" aria-hidden="true"></i>
+                                        <span>Add Category</span>
+                                    </button>
+                                    <button class="action-btn secondary">
+                                        <i class="fas fa-chart-bar" aria-hidden="true"></i>
+                                        <span>View Reports</span>
+                                    </button>
+                                    <button class="action-btn secondary">
+                                        <i class="fas fa-cog" aria-hidden="true"></i>
+                                        <span>Settings</span>
+                                    </button>
+                                    <button class="action-btn secondary">
+                                        <i class="fas fa-boxes" aria-hidden="true"></i>
+                                        <span>Manage Inventory</span>
+                                    </button>
+                                </div>
+
+                                <!-- Top Categories -->
+                                <div class="top-categories">
+                                    <h4 class="category-title">Top Categories</h4>
+                                    <div class="category-list">
+                                        <div class="category-item">
+                                            <div class="category-info">
+                                                <span class="category-name">Electronics</span>
+                                                <span class="category-count">342 products</span>
+                                            </div>
+                                            <div class="category-progress">
+                                                <div class="progress-bar">
+                                                    <div class="progress-fill" style="width: 45%"></div>
+                                                </div>
+                                                <span class="progress-text">45%</span>
+                                            </div>
+                                        </div>
+                                        <div class="category-item">
+                                            <div class="category-info">
+                                                <span class="category-name">Home & Garden</span>
+                                                <span class="category-count">189 products</span>
+                                            </div>
+                                            <div class="category-progress">
+                                                <div class="progress-bar">
+                                                    <div class="progress-fill" style="width: 25%"></div>
+                                                </div>
+                                                <span class="progress-text">25%</span>
+                                            </div>
+                                        </div>
+                                        <div class="category-item">
+                                            <div class="category-info">
+                                                <span class="category-name">Fashion</span>
+                                                <span class="category-count">156 products</span>
+                                            </div>
+                                            <div class="category-progress">
+                                                <div class="progress-bar">
+                                                    <div class="progress-fill" style="width: 20%"></div>
+                                                </div>
+                                                <span class="progress-text">20%</span>
+                                            </div>
+                                        </div>
+                                        <div class="category-item">
+                                            <div class="category-info">
+                                                <span class="category-name">Sports</span>
+                                                <span class="category-count">78 products</span>
+                                            </div>
+                                            <div class="category-progress">
+                                                <div class="progress-bar">
+                                                    <div class="progress-fill" style="width: 10%"></div>
+                                                </div>
+                                                <span class="progress-text">10%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
                 </div>
             </div>
-
-            <!-- Quick Actions Section -->
-            <div class="actions-section">
-                <div class="content-card">
-                    <div class="card-header-enhanced">
-                        <div class="card-title-section">
-                            <i class="fas fa-bolt me-2"></i>
-                            <h3>Quick Actions</h3>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <QuickActions />
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-</div>
-
-<style>
-    /* Enhanced Dashboard Styles */
-
-    .dashboard-container {
-        min-height: 100vh;
-        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-        padding: 0;
-    }
-
-    /* Enhanced Header */
-    .dashboard-header-enhanced {
-        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-        color: white;
-        padding: 2rem 0;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-
-    .header-content {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 1.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
-
-    .header-title {
-        flex: 1;
-    }
-
-    .dashboard-title {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin: 0 0 0.5rem 0;
-        background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    .dashboard-subtitle {
-        font-size: 1.1rem;
-        opacity: 0.9;
-        margin: 0;
-        font-weight: 400;
-    }
-
-    .btn-refresh {
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-        border: none;
-        color: white;
-        padding: 0.75rem 1.5rem;
-        border-radius: 0.5rem;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .btn-refresh:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
-        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-    }
-
-    /* Loading State */
-    .loading-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 400px;
-        background: white;
-        border-radius: 1rem;
-        margin: 2rem auto;
-        max-width: 600px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        animation: fadeInUp 0.6s ease-out;
-    }
-
-    .loading-spinner {
-        width: 4rem;
-        height: 4rem;
-        border: 4px solid rgba(59, 130, 246, 0.2);
-        border-radius: 50%;
-        border-top-color: #3b82f6;
-        animation: spin 1s linear infinite;
-        margin-bottom: 1.5rem;
-    }
-
-    .loading-text h4 {
-        color: #1e293b;
-        margin: 0 0 0.5rem 0;
-        font-size: 1.25rem;
-        font-weight: 600;
-    }
-
-    .loading-text p {
-        color: #64748b;
-        margin: 0;
-        font-size: 0.95rem;
-    }
-
-    /* Error State */
-    .error-container-enhanced {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 400px;
-        background: white;
-        border-radius: 1rem;
-        margin: 2rem auto;
-        max-width: 600px;
-        padding: 3rem;
-        text-align: center;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        animation: fadeInUp 0.6s ease-out;
-    }
-
-    .error-icon {
-        font-size: 4rem;
-        color: #ef4444;
-        margin-bottom: 1.5rem;
-    }
-
-    .error-content h3 {
-        color: #1e293b;
-        margin: 0 0 1rem 0;
-        font-size: 1.5rem;
-        font-weight: 600;
-    }
-
-    .error-content p {
-        color: #64748b;
-        margin: 0 0 2rem 0;
-        line-height: 1.6;
-    }
-
-    .error-actions {
-        display: flex;
-        gap: 1rem;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-
-    .error-actions .btn {
-        padding: 0.75rem 1.5rem;
-        border-radius: 0.5rem;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-
-    .error-actions .btn-primary {
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-        border: none;
-        color: white;
-    }
-
-    .error-actions .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
-    }
-
-    .error-actions .btn-secondary {
-        background: #f1f5f9;
-        border: 1px solid #e2e8f0;
-        color: #475569;
-    }
-
-    .error-actions .btn-secondary:hover {
-        background: #e2e8f0;
-        transform: translateY(-1px);
-    }
-
-    /* Stats Section */
-    .stats-section {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 1.5rem;
-        margin-bottom: 3rem;
-    }
-
-    .section-header {
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-
-    .section-title {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #1e293b;
-        margin: 0 0 0.5rem 0;
-    }
-
-    .section-description {
-        color: #64748b;
-        font-size: 1.1rem;
-        margin: 0;
-    }
-
-    /* Enhanced Stats Grid */
-    .stats-grid-enhanced {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
-    }
-
-    .stat-card-enhanced {
-        background: white;
-        border-radius: 1rem;
-        padding: 2rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-        animation: slideInUp 0.6s ease-out;
-    }
-
-    .stat-card-enhanced::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
-    }
-
-    .stat-card-enhanced:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    }
-
-    /* Individual card themes */
-    .products-card::before {
-        background: linear-gradient(90deg, #10b981 0%, #059669 100%);
-    }
-
-    .categories-card::before {
-        background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
-    }
-
-    .stock-card::before {
-        background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
-    }
-
-    .revenue-card::before {
-        background: linear-gradient(90deg, #8b5cf6 0%, #7c3aed 100%);
-    }
-
-    .stat-icon {
-        width: 3rem;
-        height: 3rem;
-        border-radius: 0.75rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.25rem;
-        color: white;
-        margin-bottom: 1rem;
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-    }
-
-    .stat-icon.warning {
-        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    }
-
-    .stat-icon.success {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    }
-
-    .stat-content {
-        flex: 1;
-    }
-
-    .stat-value {
-        font-size: 2.5rem;
-        font-weight: 800;
-        color: #1e293b;
-        line-height: 1;
-        margin-bottom: 0.5rem;
-    }
-
-    .stat-label {
-        font-size: 0.875rem;
-        color: #64748b;
-        font-weight: 600;
-        margin-bottom: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    .stat-trend {
-        display: flex;
-        align-items: center;
-        font-size: 0.875rem;
-        font-weight: 600;
-    }
-
-    .trend-up {
-        color: #10b981;
-    }
-
-    .trend-down {
-        color: #ef4444;
-    }
-
-    /* Main Dashboard Grid */
-    .dashboard-grid {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 1.5rem;
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 2rem;
-    }
-
-    /* Content Cards */
-    .content-card {
-        background: white;
-        border-radius: 1rem;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-        animation: slideInUp 0.6s ease-out;
-    }
-
-    .card-header-enhanced {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        border-bottom: 1px solid #e2e8f0;
-        padding: 1.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .card-title-section {
-        display: flex;
-        align-items: center;
-    }
-
-    .card-title-section h3 {
-        margin: 0;
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: #1e293b;
-    }
-
-    .card-actions .btn {
-        font-size: 0.875rem;
-        padding: 0.5rem 1rem;
-    }
-
-    .card-body {
-        padding: 1.5rem;
-    }
-
-    /* Animations */
-    @keyframes spin {
-        to {
-            transform: rotate(360deg);
         }
-    }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    @keyframes slideInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /* Responsive Design */
-    @media (max-width: 1024px) {
-        .dashboard-grid {
-            grid-template-columns: 1fr;
-            gap: 1.5rem;
-        }
-
-        .dashboard-title {
-            font-size: 2rem;
-        }
-
-        .header-content {
-            flex-direction: column;
-            text-align: center;
-            gap: 1.5rem;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .stats-grid-enhanced {
-            grid-template-columns: 1fr;
-        }
-
-        .dashboard-title {
-            font-size: 1.75rem;
-        }
-
-        .section-title {
-            font-size: 1.5rem;
-        }
-
-        .stat-card-enhanced {
-            padding: 1.5rem;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-        }
-
-        .error-actions {
-            flex-direction: column;
-        }
-    }
-
-    @media (max-width: 640px) {
-        .dashboard-container {
-            padding: 0 1rem;
-        }
-
-        .header-content {
-            padding: 0 1rem;
-        }
-
-        .stats-section {
-            padding: 0 1rem;
-        }
-
-        .dashboard-grid {
-            padding: 0 1rem;
-        }
-    }
-</style>
-
+    </div>
 </div>
