@@ -247,13 +247,15 @@
     {
         return activityType switch
         {
-            "product.added" => "fa-box-open",
+            "product.added" or "product.created" => "fa-box-open",
             "product.updated" => "fa-edit",
-            "product.low-stock" => "fa-exclamation-triangle",
-            "category.added" => "fa-folder-plus",
+            "product.low-stock" or "inventory.alert" => "fa-exclamation-triangle",
+            "category.added" or "category.created" => "fa-folder-plus",
             "category.updated" => "fa-folder",
             "user.login" => "fa-sign-in-alt",
             "user.logout" => "fa-sign-out-alt",
+            "order.created" => "fa-shopping-cart",
+            "order.shipped" => "fa-truck",
             _ => "fa-info-circle"
         };
     }
