@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Threading.Tasks;
 using BlazorCrudDemo.Web.Components.Dashboard;
 using BlazorCrudDemo.Web.Models;
@@ -12,7 +11,6 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
 {
     public partial class Index : ComponentBase
     {
-        [Inject] private HttpClient Http { get; set; } = default!;
         [Inject] private ILogger<Index> Logger { get; set; } = default!;
 
         private bool isLoading = true;
