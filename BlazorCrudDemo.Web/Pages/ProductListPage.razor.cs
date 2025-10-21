@@ -90,7 +90,7 @@ public partial class ProductListPage : ComponentBase, IDisposable
                 pageSize: PageSize,
                 sortBy: ParseSortBy(SortBy));
 
-            _products = result.Items.ToList();
+            _products = (result.Items ?? Enumerable.Empty<ProductDto>()).ToList();
             TotalCount = result.TotalCount;
         }
         catch (Exception ex)
@@ -434,7 +434,7 @@ public partial class ProductListPage : ComponentBase, IDisposable
         {
             await JSRuntime.InvokeVoidAsync("showToast", title, message, type);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Fallback if toast service isn't available
             Console.WriteLine($"Toast: {title} - {message}");
@@ -486,12 +486,12 @@ public partial class ProductListPage : ComponentBase, IDisposable
                 pageSize: PageSize,
                 sortBy: ParseSortBy(SortBy));
 
-            _products.AddRange(result.Items);
+            _products.AddRange(result.Items ?? Enumerable.Empty<ProductDto>());
             CurrentPage++;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            await ShowToast("Error loading more products", ex.Message, "danger");
+            await ShowToast("Error loading more products", "Failed to load more products", "danger");
         }
         finally
         {
