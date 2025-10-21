@@ -1,3 +1,6 @@
+using BlazorCrudDemo.Web.Middleware;
+using Blazored.LocalStorage;
+
 using BlazorCrudDemo.Data.Contexts;
 using BlazorCrudDemo.Data.Interfaces;
 using BlazorCrudDemo.Data.Repositories;
@@ -16,8 +19,22 @@ using AutoMapper;
 using BlazorCrudDemo.Shared.DTOs;
 using FluentValidation;
 using System.Reflection;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .Enrich.WithEnvironmentName()
+    .Enrich.WithMachineName()
+    .Enrich.WithProcessId()
+    .Enrich.WithThreadId()
+    .CreateLogger();
+
+builder.Host.UseSerilog((context, loggerConfiguration) =>
+    loggerConfiguration.ReadFrom.Configuration(context.Configuration));
 
 // Add services to the container
 builder.Services.AddRazorPages();
@@ -72,6 +89,11 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IStateContainer, StateContainer>();
 builder.Services.AddScoped<IBusinessValidationService, BusinessValidationService>();
+builder.Services.AddScoped<ErrorNotificationService>();
+builder.Services.AddScoped<ErrorRecoveryService>();
+builder.Services.AddScoped<NetworkStatusService>();
+builder.Services.AddScoped<OfflineModeService>();
+builder.Services.AddScoped<ErrorRecoveryGuidanceService>();
 
 // Register background services
 builder.Services.AddHostedService<MaintenanceBackgroundService>();
@@ -81,12 +103,10 @@ builder.Services.AddHostedService<DataSyncBackgroundService>();
 // Register SignalR
 builder.Services.AddSignalR();
 
-// Add memory cache
-builder.Services.AddMemoryCache();
-
 // Add Blazored services
 builder.Services.AddBlazoredToast();
 builder.Services.AddBlazoredModal();
+builder.Services.AddBlazoredLocalStorage();
 
 var app = builder.Build();
 
@@ -101,6 +121,13 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
+// Add request/response logging middleware
+app.UseMiddleware<RequestResponseLoggingMiddleware>();
+
+// Add global exception handler middleware
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+
 app.UseStaticFiles();
 app.UseRouting();
 
