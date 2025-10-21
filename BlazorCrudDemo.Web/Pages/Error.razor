@@ -1,0 +1,150 @@
+@page "/Error"
+@using Microsoft.AspNetCore.Diagnostics
+@using System.Diagnostics
+@using System.Text
+@using Microsoft.AspNetCore.Components
+@inject ILogger<Error> Logger
+@inject NavigationManager NavigationManager
+
+<PageTitle>Error</PageTitle>
+
+<div class="error-page">
+    <div class="error-container">
+        <!-- Error Icon -->
+        <div class="error-icon">
+            <i class="fas fa-exclamation-triangle fa-5x text-warning"></i>
+        </div>
+
+        <!-- Error Message -->
+        <div class="error-content">
+            <h1 class="error-title">
+                @GetErrorTitle()
+            </h1>
+
+            <p class="error-message">
+                @GetErrorMessage()
+            </p>
+
+            <!-- Error Details (only in development) -->
+            @if (IsDevelopment())
+            {
+                <div class="error-details">
+                    <h4>Error Details:</h4>
+                    <div class="error-stack-trace">
+                        <strong>Exception:</strong> @(Exception?.Message ?? "Unknown error")
+                        <br />
+                        <strong>Request ID:</strong> @Activity.Current?.Id ?? RequestId
+                    </div>
+                </div>
+            }
+
+            <!-- Action Buttons -->
+            <div class="error-actions">
+                <button class="btn btn-primary" @onclick="GoHome">
+                    <i class="fas fa-home me-2"></i>Go Home
+                </button>
+
+                <button class="btn btn-secondary" @onclick="RefreshPage">
+                    <i class="fas fa-redo me-2"></i>Try Again
+                </button>
+
+                @if (IsDevelopment())
+                {
+                    <button class="btn btn-outline-info" @onclick="ShowDetails">
+                        <i class="fas fa-info-circle me-2"></i>Show Details
+                    </button>
+                }
+            </div>
+
+            <!-- Report Issue Link -->
+            <div class="error-report">
+                <p class="mb-2">If this problem persists, please report it:</p>
+                <a href="mailto:support@example.com?subject=Application Error&body=@GetErrorReportBody()"
+                   class="btn btn-outline-danger btn-sm">
+                    <i class="fas fa-bug me-2"></i>Report Issue
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] public HttpContext? HttpContext { get; set; }
+
+    private IExceptionHandlerPathFeature? ExceptionHandlerPathFeature { get; set; }
+    private Exception? Exception => ExceptionHandlerPathFeature?.Error;
+    private string RequestId { get; set; } = Activity.Current?.Id ?? Guid.NewGuid().ToString();
+    private bool ShowErrorDetails { get; set; }
+
+    protected override void OnInitialized()
+    {
+        ExceptionHandlerPathFeature = HttpContext?.Features.Get<IExceptionHandlerPathFeature>();
+
+        // Log the error
+        if (Exception != null)
+        {
+            Logger.LogError(Exception, "Error page accessed for exception: {Message}", Exception.Message);
+        }
+    }
+
+    private string GetErrorTitle()
+    {
+        if (Exception == null)
+            return "Something went wrong";
+
+        return Exception switch
+        {
+            ArgumentException => "Invalid Request",
+            UnauthorizedAccessException => "Access Denied",
+            KeyNotFoundException => "Not Found",
+            _ => "Server Error"
+        };
+    }
+
+    private string GetErrorMessage()
+    {
+        if (Exception == null)
+            return "We're sorry, but something unexpected happened. Please try again.";
+
+        return Exception switch
+        {
+            ArgumentException => "The request contained invalid parameters. Please check your input and try again.",
+            UnauthorizedAccessException => "You don't have permission to access this resource.",
+            KeyNotFoundException => "The requested resource could not be found.",
+            _ => "We're experiencing technical difficulties. Our team has been notified and is working on a fix."
+        };
+    }
+
+    private bool IsDevelopment() => Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
+
+    private void GoHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+    private void RefreshPage()
+    {
+        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+    }
+
+    private void ShowDetails()
+    {
+        ShowErrorDetails = !ShowErrorDetails;
+    }
+
+    private string GetErrorReportBody()
+    {
+        var body = new StringBuilder();
+        body.AppendLine($"Error occurred at: {DateTime.Now}");
+        body.AppendLine($"Request ID: {RequestId}");
+        body.AppendLine($"URL: {NavigationManager.Uri}");
+        body.AppendLine($"Error: {Exception?.Message}");
+
+        if (IsDevelopment() && Exception?.StackTrace != null)
+        {
+            body.AppendLine($"Stack Trace: {Exception.StackTrace}");
+        }
+
+        return body.ToString();
+    }
+}
