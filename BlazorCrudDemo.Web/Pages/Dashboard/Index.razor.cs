@@ -26,9 +26,8 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
 #pragma warning disable CS0414 // Field is assigned but never used
         private string? errorMessage;
 #pragma warning restore CS0414
-        private bool showSidebar = true;
-        
-        // Filtered activities for search and filter functionality
+        private DashboardStats stats = new();
+        private List<ActivityItem> recentActivities = new();
         private IQueryable<ActivityItem> FilteredActivities => recentActivities.AsQueryable()
             .Where(a => string.IsNullOrEmpty(searchQuery) ||
                    a.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
@@ -291,6 +290,16 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
         private void NavigateToSettings()
         {
             Navigation.NavigateTo("/settings");
+        }
+
+        private void NavigateToHome()
+        {
+            Navigation.NavigateTo("/");
+        }
+
+        private void NavigateToInventory()
+        {
+            Navigation.NavigateTo("/products");
         }
 
         private void ClearSearch()
