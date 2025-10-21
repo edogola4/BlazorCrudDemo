@@ -404,14 +404,20 @@
     {
         EditingCategory = null; // Clear any existing category for create mode
         ShowFormModal = true;
-        await CategoryFormRef?.InitializeForCreate();
+        if (CategoryFormRef != null)
+        {
+            await CategoryFormRef.InitializeForCreate();
+        }
     }
 
     private async Task EditCategory(CategoryDto category)
     {
         EditingCategory = category;
         ShowFormModal = true;
-        await CategoryFormRef?.InitializeForEdit(category);
+        if (CategoryFormRef != null)
+        {
+            await CategoryFormRef.InitializeForEdit(category);
+        }
     }
 
     private async Task DeleteCategory(CategoryDto category)
