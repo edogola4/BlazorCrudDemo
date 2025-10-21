@@ -63,7 +63,7 @@
                     
                     @foreach (var item in FilteredItems)
                     {
-                        var itemId = $"item_{_uniqueId}_{GetItemValue(item)}";
+                        var itemId = $"item_{_uniqueId}_{GetItemValueString(item)}";
                         var isSelected = SelectedItems.Contains(item);
                         
                         <div class="dropdown-item">
