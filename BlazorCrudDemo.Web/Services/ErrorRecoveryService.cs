@@ -143,7 +143,7 @@ public class ErrorRecoveryService
         {
             return await circuitBreaker.ExecuteAsync(operation);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             _notificationService.ShowCriticalError($"Service unavailable for {operationName}. Please try again later.", "Service Unavailable");
             throw;
