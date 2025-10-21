@@ -42,7 +42,7 @@
                             <i class="fas fa-redo" aria-hidden="true"></i>
                             <span>Try Again</span>
                         </button>
-                        <button class="btn btn-secondary">
+                        <button class="btn btn-secondary" @onclick="NavigateToHome">
                             <i class="fas fa-home" aria-hidden="true"></i>
                             <span>Go Home</span>
                         </button>
@@ -50,10 +50,34 @@
                 </div>
             </div>
         }
-        else
-        {
-            <!-- Main Dashboard Layout -->
-            <div class="dashboard-layout">
+<div class="dashboard-controls">
+                    <div class="search-bar">
+                        <i class="fas fa-search" aria-hidden="true"></i>
+                        <input type="text" placeholder="Search dashboard..." @bind="searchQuery" @bind:event="oninput" />
+                        @if (!string.IsNullOrEmpty(searchQuery))
+                        {
+                            <button class="clear-search-btn" @onclick="ClearSearch" aria-label="Clear search">
+                                <i class="fas fa-times" aria-hidden="true"></i>
+                            </button>
+                        }
+                    </div>
+                    <div class="filters">
+                        <select @bind="selectedFilter" @bind:event="onchange">
+                            <option value="all">All Activities</option>
+                            <option value="orders">Orders</option>
+                            <option value="products">Products</option>
+                            <option value="categories">Categories</option>
+                            <option value="inventory">Inventory</option>
+                        </select>
+                        <button class="btn btn-primary" @onclick="RefreshDashboard">
+                            <i class="fas fa-sync" aria-hidden="true"></i>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Main Dashboard Layout -->
+                <div class="dashboard-layout">
                 <!-- Stats Overview -->
                 <section class="stats-section" aria-labelledby="stats-heading">
                     <h2 id="stats-heading" class="section-title">Key Metrics</h2>
@@ -249,7 +273,7 @@
                             </div>
                             <div class="card-body">
                                 <div class="activity-feed">
-                                    @foreach (var activity in recentActivities.Take(6))
+                                    @foreach (var activity in FilteredActivities.Take(6))
                                     {
                                         <div class="activity-item">
                                             <div class="activity-avatar">
@@ -288,23 +312,23 @@
                             </div>
                             <div class="card-body">
                                 <div class="quick-actions">
-                                    <button class="action-btn primary">
+                                    <button class="action-btn primary" @onclick="NavigateToAddProduct">
                                         <i class="fas fa-plus" aria-hidden="true"></i>
                                         <span>Add Product</span>
                                     </button>
-                                    <button class="action-btn primary">
+                                    <button class="action-btn primary" @onclick="NavigateToAddCategory">
                                         <i class="fas fa-folder-plus" aria-hidden="true"></i>
                                         <span>Add Category</span>
                                     </button>
-                                    <button class="action-btn secondary">
+                                    <button class="action-btn secondary" @onclick="NavigateToReports">
                                         <i class="fas fa-chart-bar" aria-hidden="true"></i>
                                         <span>View Reports</span>
                                     </button>
-                                    <button class="action-btn secondary">
+                                    <button class="action-btn secondary" @onclick="NavigateToSettings">
                                         <i class="fas fa-cog" aria-hidden="true"></i>
                                         <span>Settings</span>
                                     </button>
-                                    <button class="action-btn secondary">
+                                    <button class="action-btn secondary" @onclick="NavigateToInventory">
                                         <i class="fas fa-boxes" aria-hidden="true"></i>
                                         <span>Manage Inventory</span>
                                     </button>
