@@ -160,7 +160,7 @@ function updateChartPeriod(period) {
     // For demo purposes, we'll just reinitialize with slightly different data
     setTimeout(function() {
         // Remove existing charts
-        Chart.helpers.each(Chart.instances, (instance) => {
+        Object.values(Chart.instances).forEach(instance => {
             instance.destroy();
         });
 
@@ -272,9 +272,15 @@ function generateLabels(days) {
     return labels;
 }
 
-// Add event listener for period selector (if it exists)
-document.addEventListener('change', function(e) {
-    if (e.target && e.target.classList.contains('chart-period-select')) {
-        updateChartPeriod(e.target.value);
-    }
-});
+// Function to refresh charts (called from Blazor)
+function refreshCharts() {
+    // Remove existing charts using the correct Chart.js API
+    Object.values(Chart.instances).forEach(instance => {
+        instance.destroy();
+    });
+
+    // Reinitialize charts
+    setTimeout(function() {
+        initializeCharts();
+    }, 100);
+}
