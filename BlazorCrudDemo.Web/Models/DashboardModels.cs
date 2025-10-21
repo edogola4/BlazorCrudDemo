@@ -37,6 +37,10 @@ namespace BlazorCrudDemo.Web.Models
         public decimal LowStockTrend { get; set; }
         public decimal TotalInventoryValue { get; set; }
         public decimal InventoryValueTrend { get; set; }
+        public int TotalOrders { get; set; }
+        public decimal OrdersTrend { get; set; }
+        public decimal TotalRevenue { get; set; }
+        public decimal RevenueTrend { get; set; }
     }
 
     public class CategoryDistribution
