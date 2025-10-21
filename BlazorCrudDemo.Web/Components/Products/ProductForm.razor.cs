@@ -67,7 +67,8 @@ public partial class ProductForm : ComponentBase, IDisposable
         {
             try
             {
-                Product = await ProductService.GetProductAsync(Id.Value);
+                var product = await ProductService.GetProductAsync(Id.Value);
+                Product = product ?? new ProductDto();
             }
             catch (Exception ex)
             {
