@@ -508,3 +508,18 @@ $RECYCLE.BIN/
 
 # Local development settings
 appsettings.Development.json
+
+
+# Backup files
+*.backup
+*.backup2
+*backup*
+
+# Log directories  
+logs/
+
+# Test project directory
+TestProject/
+
+# Installation scripts
+dotnet-install.sh
