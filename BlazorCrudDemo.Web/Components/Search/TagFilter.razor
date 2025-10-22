@@ -88,11 +88,11 @@
         switch (e.Key)
         {
             case "Enter" when !string.IsNullOrWhiteSpace(_inputValue):
-                AddTag(_inputValue);
+                _ = AddTag(_inputValue);
                 break;
                 
             case "Backspace" when string.IsNullOrEmpty(_inputValue) && SelectedTags.Any():
-                RemoveTag(SelectedTags.Last());
+                _ = RemoveTag(SelectedTags.Last());
                 break;
         }
     }
@@ -100,9 +100,9 @@
     private void OnInputBlur()
     {
         // Small delay to allow click events to be processed
-        Task.Delay(200).ContinueWith(_ => 
+        _ = Task.Delay(200).ContinueWith(_ =>
         {
-            InvokeAsync(() => 
+            InvokeAsync(() =>
             {
                 ShowSuggestions = false;
                 StateHasChanged();

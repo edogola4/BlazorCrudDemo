@@ -217,6 +217,8 @@
             Icon = "fas fa-folder" // Default icon
         };
         StateHasChanged();
+
+        await Task.CompletedTask;
     }
 
     public async Task InitializeForEdit(CategoryDto category)
@@ -231,6 +233,8 @@
             IsActive = category.IsActive
         };
         StateHasChanged();
+
+        await Task.CompletedTask;
     }
 
     private void SelectIcon(string icon)
@@ -262,8 +266,8 @@
             }
 
             CategoryDto result;
-            BlazorCrudDemo.Web.Services.UpdateCategoryDto updateDto = null;
-            BlazorCrudDemo.Web.Services.CreateCategoryDto createDto = null;
+            BlazorCrudDemo.Web.Services.UpdateCategoryDto? updateDto = null;
+            BlazorCrudDemo.Web.Services.CreateCategoryDto? createDto = null;
 
             if (IsEdit && Category != null)
             {
@@ -307,9 +311,9 @@
         }
     }
 
-    private void Cancel()
+    private async Task Cancel()
     {
-        OnCancel.InvokeAsync();
+        await OnCancel.InvokeAsync();
     }
 
     private async Task ShowError(string message)
