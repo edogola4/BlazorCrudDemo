@@ -85,13 +85,40 @@ namespace BlazorCrudDemo.Web.Services
         {
             try
             {
+                // Skip logging if user ID is null, empty, or "unknown"
+                if (string.IsNullOrEmpty(userId) || userId == "unknown")
+                {
+                    _logger.LogWarning("Skipping login log - Invalid UserId: {UserId}", userId);
+                    return;
+                }
+
+                // For failed login attempts, verify the user exists before logging
+                if (!isSuccessful)
+                {
+                    var userExists = await _userManager.FindByIdAsync(userId) != null;
+                    if (!userExists)
+                    {
+                        _logger.LogWarning("Skipping login log - User with ID {UserId} does not exist", userId);
+                        return;
+                    }
+                }
+
+                // For successful logins, also verify the user exists
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    _logger.LogWarning("Skipping login log - User with ID {UserId} does not exist", userId);
+                    return;
+                }
+
                 var loginHistory = new LoginHistory
                 {
                     UserId = userId,
-                    IpAddress = ipAddress,
-                    UserAgent = userAgent,
+                    IpAddress = ipAddress ?? "Unknown",
+                    UserAgent = userAgent ?? "Unknown",
                     IsSuccessful = isSuccessful,
-                    FailureReason = failureReason
+                    FailureReason = failureReason,
+                    LoginTime = DateTime.UtcNow
                 };
 
                 _context.LoginHistory.Add(loginHistory);
@@ -99,6 +126,7 @@ namespace BlazorCrudDemo.Web.Services
             }
             catch (Exception ex)
             {
+                // Log the error but don't throw - we don't want login to fail because of logging
                 _logger.LogError(ex, "Error logging login for user {UserId}", userId);
             }
         }
