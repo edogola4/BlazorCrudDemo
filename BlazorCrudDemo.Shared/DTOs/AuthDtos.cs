@@ -36,6 +36,7 @@ namespace BlazorCrudDemo.Shared.DTOs
         public DateTime? ExpiresAt { get; set; }
         public List<string>? Errors { get; set; }
         public ApplicationUserDto? User { get; set; }
+        public bool RequiresSignIn { get; set; }
     }
 
     public class ApplicationUserDto
