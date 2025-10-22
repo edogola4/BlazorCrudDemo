@@ -1,9 +1,9 @@
 @page "/account/settings"
-@attribute [Authorize]
+// Removed [Authorize] attribute to disable authentication
 @using BlazorCrudDemo.Web.Services
 @using BlazorCrudDemo.Shared.DTOs
 @using Microsoft.AspNetCore.Authorization
-@inject IAuthenticationService AuthenticationService
+// REMOVED: IAuthenticationService injection - Removed since auth is disabled
 @inject IUserService UserService
 @inject IAuditService AuditService
 @inject NavigationManager Navigation
@@ -116,17 +116,13 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label text-muted">Account Created</label>
-                                <div class="fw-medium">@currentUser?.CreatedDate.ToString("MMM dd, yyyy 'at' HH:mm")</div>
+                                <div class="fw-medium">Jan 1, 2024</div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label text-muted">Last Login</label>
-                                <div class="fw-medium">
-                                    @(currentUser?.LastLoginDate.HasValue == true
-                                        ? currentUser.LastLoginDate.Value.ToString("MMM dd, yyyy 'at' HH:mm")
-                                        : "Never")
-                                </div>
+                                <div class="fw-medium">Never</div>
                             </div>
                         </div>
                     </div>
@@ -152,29 +148,32 @@
                 </div>
                 <div class="card-body text-center">
                     <div class="user-avatar-large mb-3">
-                        @if (!string.IsNullOrEmpty(currentUser?.ProfileImageUrl))
+                        <!-- @if (!string.IsNullOrEmpty(currentUser?.ProfileImageUrl))
                         {
                             <img src="@currentUser.ProfileImageUrl" alt="Profile" class="profile-image-large" />
                         }
                         else
                         {
                             <i class="bi bi-person-circle"></i>
-                        }
+                        } -->
+                        <i class="bi bi-person-circle"></i>
                     </div>
 
                     <h5 class="mb-1">
-                        @(string.IsNullOrEmpty(currentUser?.FirstName + currentUser?.LastName)
+                        <!-- @(string.IsNullOrEmpty(currentUser?.FirstName + currentUser?.LastName)
                             ? currentUser?.Email?.Split('@')[0] ?? "User"
-                            : $"{currentUser?.FirstName} {currentUser?.LastName}")
+                            : $"{currentUser?.FirstName} {currentUser?.LastName}") -->
+                        Demo User
                     </h5>
 
-                    <p class="text-muted mb-3">@currentUser?.Email</p>
+                    <p class="text-muted mb-3">demo@example.com</p>
 
                     <div class="d-flex justify-content-center gap-2 mb-3">
-                        @foreach (var role in currentUser?.Roles ?? new List<string>())
+                        <!-- @foreach (var role in currentUser?.Roles ?? new List<string>())
                         {
                             <span class="badge @(role == "Admin" ? "bg-danger" : "bg-primary")">@role</span>
-                        }
+                        } -->
+                        <span class="badge bg-primary">User</span>
                     </div>
 
                     <div class="form-check form-switch">
@@ -198,12 +197,15 @@
                         <button class="btn btn-outline-success" @onclick="RefreshProfile">
                             <i class="bi bi-arrow-clockwise me-2"></i>Refresh Profile
                         </button>
-                        @if (isAdmin)
+                        <!-- @if (isAdmin)
                         {
                             <button class="btn btn-outline-warning" @onclick="ShowAdminSettingsModal">
                                 <i class="bi bi-gear me-2"></i>Admin Settings
                             </button>
-                        }
+                        } -->
+                        <button class="btn btn-outline-warning" @onclick="ShowAdminSettingsModal">
+                            <i class="bi bi-gear me-2"></i>Admin Settings
+                        </button>
                         <button class="btn btn-outline-danger" @onclick="ShowDeleteAccountModal">
                             <i class="bi bi-trash me-2"></i>Delete Account
                         </button>
@@ -332,7 +334,7 @@
 }
 
 @code {
-    private ApplicationUserDto? currentUser;
+    // private ApplicationUserDto? currentUser; - Removed since auth is disabled
     private UpdateUserDto profileModel = new();
     private ChangePasswordDto passwordModel = new();
     private bool isSaving = false;
@@ -345,59 +347,47 @@
 
     protected override async Task OnInitializedAsync()
     {
-        currentUser = await AuthenticationService.GetCurrentUserAsync();
-        if (currentUser == null)
-        {
-            Navigation.NavigateTo("/auth/login");
-            return;
-        }
-
-        isAdmin = currentUser.Roles.Contains("Admin");
-
-        // Initialize profile model
+        // currentUser = await AuthenticationService.GetCurrentUserAsync();
+        // if (currentUser == null)
+        // Initialize profile model with dummy data since auth is disabled
         profileModel = new UpdateUserDto
         {
-            FirstName = currentUser.FirstName,
-            LastName = currentUser.LastName,
-            Email = currentUser.Email,
-            ProfileImageUrl = currentUser.ProfileImageUrl,
-            IsActive = currentUser.IsActive
+            FirstName = "Demo",
+            LastName = "User",
+            Email = "demo@example.com",
+            ProfileImageUrl = "",
+            IsActive = true
         };
 
-        // Log account settings access
-        await AuditService.LogUserActivityAsync(
-            currentUser.Id,
-            "ACCOUNT_SETTINGS_VIEW",
-            "User accessed account settings",
-            null,
-            null,
-            "Account",
-            GetClientIpAddress(),
-            GetUserAgent());
+        await Task.CompletedTask;
     }
 
     private async Task SaveProfile()
     {
-        if (currentUser == null) return;
+        // if (currentUser == null) return;
 
         isSaving = true;
         try
         {
-            var result = await UserService.UpdateUserAsync(currentUser.Id, profileModel, currentUser.Id);
-            if (result.Success)
-            {
-                // Refresh current user data
-                currentUser = await AuthenticationService.GetCurrentUserAsync();
-                await InvokeAsync(StateHasChanged);
-            }
-            else
-            {
-                // Show error
-            }
+            // var result = await UserService.UpdateUserAsync(currentUser.Id, profileModel, currentUser.Id);
+            // if (result.Success)
+            // {
+            //     // Refresh current user data
+            //     currentUser = await AuthenticationService.GetCurrentUserAsync();
+            //     await InvokeAsync(StateHasChanged);
+            // }
+            // else
+            // {
+            //     // Show error
+            // }
+
+            // For demo purposes, just show success message
+            await JSRuntime.InvokeVoidAsync("alert", "Profile saved successfully (demo mode)");
         }
         catch (Exception ex)
         {
             // Handle error
+            await JSRuntime.InvokeVoidAsync("alert", $"Error saving profile: {ex.Message}");
         }
         finally
         {
@@ -419,29 +409,34 @@
 
     private async Task HandleChangePassword()
     {
-        if (currentUser == null) return;
+        // if (currentUser == null) return;
 
         isChangingPassword = true;
         try
         {
-            var result = await AuthenticationService.ChangePasswordAsync(
-                currentUser.Id,
-                passwordModel.CurrentPassword,
-                passwordModel.NewPassword);
+            // var result = await AuthenticationService.ChangePasswordAsync(
+            //     currentUser.Id,
+            //     passwordModel.CurrentPassword,
+            //     passwordModel.NewPassword);
 
-            if (result.Success)
-            {
-                CloseChangePasswordModal();
-                // Show success message
-            }
-            else
-            {
-                // Show error
-            }
+            // if (result.Success)
+            // {
+            //     CloseChangePasswordModal();
+            //     // Show success message
+            // }
+            // else
+            // {
+            //     // Show error
+            // }
+
+            // For demo purposes, just show success message
+            CloseChangePasswordModal();
+            await JSRuntime.InvokeVoidAsync("alert", "Password changed successfully (demo mode)");
         }
         catch (Exception ex)
         {
             // Handle error
+            await JSRuntime.InvokeVoidAsync("alert", $"Error changing password: {ex.Message}");
         }
         finally
         {
@@ -478,7 +473,7 @@
 
     private async Task HandleDeleteAccount()
     {
-        if (currentUser == null) return;
+        // if (currentUser == null) return;
 
         isDeleting = true;
         try
@@ -490,6 +485,7 @@
         catch (Exception ex)
         {
             // Handle error
+            await JSRuntime.InvokeVoidAsync("alert", $"Error deleting account: {ex.Message}");
         }
         finally
         {
@@ -499,14 +495,14 @@
 
     private async Task RefreshProfile()
     {
-        currentUser = await AuthenticationService.GetCurrentUserAsync();
+        // currentUser = await AuthenticationService.GetCurrentUserAsync();
         profileModel = new UpdateUserDto
         {
-            FirstName = currentUser?.FirstName,
-            LastName = currentUser?.LastName,
-            Email = currentUser?.Email,
-            ProfileImageUrl = currentUser?.ProfileImageUrl,
-            IsActive = currentUser?.IsActive ?? true
+            FirstName = "Demo", // currentUser?.FirstName,
+            LastName = "User", // currentUser?.LastName,
+            Email = "demo@example.com", // currentUser?.Email,
+            ProfileImageUrl = "", // currentUser?.ProfileImageUrl,
+            IsActive = true // currentUser?.IsActive ?? true
         };
         await InvokeAsync(StateHasChanged);
     }
