@@ -153,12 +153,20 @@
     {
         if (firstRender)
         {
-            // Initialize keyboard shortcuts after rendering
-            var dotNetObjectRef = DotNetObjectReference.Create(this);
-            await JSRuntime.InvokeVoidAsync("initializeKeyboardShortcuts", dotNetObjectRef);
+            try
+            {
+                // Initialize keyboard shortcuts after rendering
+                var dotNetObjectRef = DotNetObjectReference.Create(this);
+                await JSRuntime.InvokeVoidAsync("initializeKeyboardShortcuts", dotNetObjectRef);
 
-            // Initialize responsive detection after rendering
-            await JSRuntime.InvokeVoidAsync("initializeResponsiveDetection", dotNetObjectRef);
+                // Initialize responsive detection after rendering
+                await JSRuntime.InvokeVoidAsync("initializeResponsiveDetection", dotNetObjectRef);
+            }
+            catch (JSException ex)
+            {
+                // JavaScript functions might not be available yet, log and continue
+                Console.WriteLine($"JavaScript initialization error: {ex.Message}");
+            }
 
             // Update mobile state after rendering
             await UpdateMobileStateAsync();
@@ -177,10 +185,10 @@
         {
             return await JSRuntime.InvokeAsync<bool>("isMobileDevice");
         }
-        catch
+        catch (JSException)
         {
-            // Fallback for server-side rendering
-            return System.OperatingSystem.IsBrowser() ? await JSRuntime.InvokeAsync<bool>("isMobileDevice") : false;
+            // Fallback for server-side rendering or when JS isn't available
+            return false;
         }
     }
 
@@ -217,7 +225,15 @@
 
     private void ToggleFullscreen()
     {
-        JSRuntime.InvokeVoidAsync("toggleFullscreen");
+        try
+        {
+            JSRuntime.InvokeVoidAsync("toggleFullscreen");
+        }
+        catch (JSException ex)
+        {
+            // JavaScript function might not be available yet
+            Console.WriteLine($"Fullscreen toggle error: {ex.Message}");
+        }
     }
 
     private void HandleSearchCommand()
