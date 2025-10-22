@@ -1,10 +1,4 @@
-@page "/"
-@page "/dashboard"
-@using BlazorCrudDemo.Web.Components.Layout
-@using BlazorCrudDemo.Web.Components.Dashboard
-@using BlazorCrudDemo.Web.Models
-@using System.Globalization
-@using Microsoft.AspNetCore.Components
+@using BlazorCrudDemo.Web.Utilities
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -167,7 +161,7 @@
                                 </div>
                             </div>
                             <div class="stat-body">
-                                <h3 class="stat-value">@stats.TotalInventoryValue.ToString("C0")</h3>
+                                <h3 class="stat-value">@CurrencyFormatter.FormatPrice(stats.TotalInventoryValue)</h3>
                                 <p class="stat-label">Inventory Value</p>
                             </div>
                             <div class="stat-footer">
