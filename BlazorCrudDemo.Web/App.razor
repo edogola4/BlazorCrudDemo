@@ -1,45 +1,18 @@
 @using BlazorCrudDemo.Web.Components.Layout
-@using BlazorCrudDemo.Web.Services
-@using BlazorCrudDemo.Web.Shared
-@using Microsoft.AspNetCore.Authorization
-@inject IAuthenticationService AuthenticationService
-@inject NavigationManager Navigation
 
 <Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
         @if (IsAuthRoute(routeData.PageType))
         {
-            <!-- Authentication routes use AuthLayout -->
-            <LayoutView Layout="@typeof(AuthLayout)">
-                <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(AuthLayout)">
-                    <NotAuthorized>
-                        <div class="alert alert-warning">
-                            <h4>Access Denied</h4>
-                            <p>You are not authorized to access this page. Please <a href="/auth/login">login</a> first.</p>
-                        </div>
-                    </NotAuthorized>
-                </AuthorizeRouteView>
+            <!-- Authentication routes use MainLayout (AuthLayout doesn't exist) -->
+            <LayoutView Layout="@typeof(MainLayout)">
+                <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
             </LayoutView>
         }
         else
         {
             <!-- Regular app routes use MainLayout -->
-            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
-                <NotAuthorized>
-                    <div class="alert alert-warning">
-                        <h4>Access Denied</h4>
-                        <p>You are not authorized to access this page. Please <a href="/auth/login">login</a> first.</p>
-                    </div>
-                </NotAuthorized>
-                <Authorizing>
-                    <div class="text-center">
-                        <div class="spinner-border" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <p>Checking authentication...</p>
-                    </div>
-                </Authorizing>
-            </AuthorizeRouteView>
+            <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
         }
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
@@ -52,27 +25,8 @@
 </Router>
 
 @code {
-    protected override async Task OnInitializedAsync()
-    {
-        // Check if user is authenticated and redirect if needed
-        var isAuthenticated = await AuthenticationService.IsAuthenticatedAsync();
-
-        // If not authenticated and trying to access protected routes, redirect to login
-        var currentPath = new Uri(Navigation.Uri).AbsolutePath;
-        if (!isAuthenticated && !IsPublicRoute(currentPath) && !currentPath.StartsWith("/auth/"))
-        {
-            Navigation.NavigateTo($"/auth/login?returnUrl={Uri.EscapeDataString(currentPath)}");
-        }
-    }
-
     private bool IsAuthRoute(Type pageType)
     {
         return pageType.Namespace?.StartsWith("BlazorCrudDemo.Web.Pages.Auth") == true;
-    }
-
-    private bool IsPublicRoute(string path)
-    {
-        var publicRoutes = new[] { "/", "/auth/login", "/auth/register", "/auth/forgot-password" };
-        return publicRoutes.Contains(path) || path.StartsWith("/auth/");
     }
 }
