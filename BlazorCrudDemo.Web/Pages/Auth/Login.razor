@@ -1,0 +1,127 @@
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.WebUtilities
+@using BlazorCrudDemo.Shared.DTOs
+@using BlazorCrudDemo.Web.Services
+@inject IAuthenticationService AuthenticationService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<div class="auth-card card">
+    <div class="auth-header card-header">
+        <h4 class="mb-0"><i class="fas fa-sign-in-alt me-2"></i>Login</h4>
+    </div>
+    <div class="auth-body card-body">
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>@errorMessage
+            </div>
+        }
+
+        <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3">
+                <label for="email" class="form-label">Email Address</label>
+                <InputText id="email" class="form-control" @bind-Value="loginModel.Email" placeholder="Enter your email" />
+                <ValidationMessage For="@(() => loginModel.Email)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <InputText id="password" type="password" class="form-control" @bind-Value="loginModel.Password" placeholder="Enter your password" />
+                <ValidationMessage For="@(() => loginModel.Password)" />
+            </div>
+
+            <div class="mb-3 form-check">
+                <InputCheckbox id="rememberMe" class="form-check-input" @bind-Value="loginModel.RememberMe" />
+                <label class="form-check-label" for="rememberMe">
+                    Remember me
+                </label>
+            </div>
+
+            <div class="d-grid">
+                <button type="submit" class="btn btn-primary btn-auth" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    }
+                    Login
+                </button>
+            </div>
+
+            <div class="auth-links">
+                <a href="/auth/forgot-password" class="text-decoration-none">Forgot your password?</a>
+            </div>
+
+            <div class="auth-links">
+                <span>Don't have an account? </span>
+                <a href="/auth/register" class="text-decoration-none">Register here</a>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private LoginDto loginModel = new();
+    private bool isLoading = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if user is already authenticated
+        var isAuthenticated = await AuthenticationService.IsAuthenticatedAsync();
+        if (isAuthenticated)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        // Check for return URL parameter
+        var uri = new Uri(Navigation.Uri);
+        var queryParams = QueryHelpers.ParseQuery(uri.Query);
+        var returnUrl = queryParams.GetValueOrDefault("returnUrl");
+        if (!string.IsNullOrEmpty(returnUrl))
+        {
+            loginModel.ReturnUrl = returnUrl;
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await AuthenticationService.LoginAsync(loginModel);
+
+            if (result.Success)
+            {
+                // Store token in localStorage for API calls
+                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", result.AccessToken);
+
+                // Navigate to dashboard or return URL
+                var returnUrl = loginModel.ReturnUrl ?? "/";
+                Navigation.NavigateTo(returnUrl, forceLoad: true);
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Login failed";
+                if (result.Errors?.Any() == true)
+                {
+                    errorMessage = string.Join(", ", result.Errors);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An unexpected error occurred. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

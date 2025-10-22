@@ -1,11 +1,16 @@
 @using Microsoft.AspNetCore.Components.Routing
 @using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Authorization
+@using BlazorCrudDemo.Web.Services
+@using BlazorCrudDemo.Shared.DTOs
+@inject IAuthenticationService AuthenticationService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 @implements IDisposable
 
 <div class="nav-menu @(IsMobile ? "mobile-nav" : "desktop-nav") @(IsCollapsed ? "collapsed" : "")">
     <!-- Navigation Items -->
     <nav class="nav-items">
-
 
         <!-- Home -->
         <div class="nav-item @(IsActive("/") ? "active" : "")" @onclick="() => NavigateToHome()">
@@ -14,11 +19,11 @@
                     <i class="bi bi-house-door-fill nav-icon"></i>
                     @if (!IsCollapsed)
                     {
-                        <span class="nav-text">Home</span>
+                        <span class="nav-text">Dashboard</span>
                     }
                     else
                     {
-                        <span class="nav-tooltip">Home</span>
+                        <span class="nav-tooltip">Dashboard</span>
                     }
                 </div>
                 @if (IsActive("/"))
@@ -27,7 +32,6 @@
                 }
             </NavLink>
         </div>
-
 
         <!-- Search -->
         <div class="nav-item @(IsActive("/products/search") ? "active" : "")" @onclick="() => NavigateToSearch()">
@@ -91,6 +95,148 @@
                 }
             </NavLink>
         </div>
+
+        <!-- Admin Section (Only for Admin users) -->
+        @if (currentUser != null && currentUser.Roles.Contains("Admin"))
+        {
+            <!-- Admin Separator -->
+            <div class="nav-separator">
+                @if (!IsCollapsed)
+                {
+                    <span>Administration</span>
+                }
+            </div>
+
+            <!-- User Management -->
+            <div class="nav-item @(IsActive("/admin/users") ? "active" : "")" @onclick="() => NavigateToUserManagement()">
+                <NavLink href="admin/users" class="nav-link">
+                    <div class="nav-icon-wrapper">
+                        <i class="bi bi-people nav-icon"></i>
+                        @if (!IsCollapsed)
+                        {
+                            <span class="nav-text">User Management</span>
+                        }
+                        else
+                        {
+                            <span class="nav-tooltip">User Management</span>
+                        }
+                    </div>
+                    @if (IsActive("/admin/users"))
+                    {
+                        <div class="nav-indicator"></div>
+                    }
+                </NavLink>
+            </div>
+
+            <!-- Audit Logs -->
+            <div class="nav-item @(IsActive("/admin/audit") ? "active" : "")" @onclick="() => NavigateToAuditLogs()">
+                <NavLink href="admin/audit" class="nav-link">
+                    <div class="nav-icon-wrapper">
+                        <i class="bi bi-journal-text nav-icon"></i>
+                        @if (!IsCollapsed)
+                        {
+                            <span class="nav-text">Audit Logs</span>
+                        }
+                        else
+                        {
+                            <span class="nav-tooltip">Audit Logs</span>
+                        }
+                    </div>
+                    @if (IsActive("/admin/audit"))
+                    {
+                        <div class="nav-indicator"></div>
+                    }
+                </NavLink>
+            </div>
+
+            <!-- Reports -->
+            <div class="nav-item @(IsActive("/admin/reports") ? "active" : "")" @onclick="() => NavigateToReports()">
+                <NavLink href="admin/reports" class="nav-link">
+                    <div class="nav-icon-wrapper">
+                        <i class="bi bi-bar-chart nav-icon"></i>
+                        @if (!IsCollapsed)
+                        {
+                            <span class="nav-text">Reports</span>
+                        }
+                        else
+                        {
+                            <span class="nav-tooltip">Reports</span>
+                        }
+                    </div>
+                    @if (IsActive("/admin/reports"))
+                    {
+                        <div class="nav-indicator"></div>
+                    }
+                </NavLink>
+            </div>
+        }
+
+        <!-- Account Section -->
+        <div class="nav-separator">
+            @if (!IsCollapsed)
+            {
+                <span>Account</span>
+            }
+        </div>
+
+        <!-- Account Settings -->
+        <div class="nav-item @(IsActive("/account/settings") ? "active" : "")" @onclick="() => NavigateToAccountSettings()">
+            <NavLink href="account/settings" class="nav-link">
+                <div class="nav-icon-wrapper">
+                    <i class="bi bi-person-gear nav-icon"></i>
+                    @if (!IsCollapsed)
+                    {
+                        <span class="nav-text">Account Settings</span>
+                    }
+                    else
+                    {
+                        <span class="nav-tooltip">Account Settings</span>
+                    }
+                </div>
+                @if (IsActive("/account/settings"))
+                {
+                    <div class="nav-indicator"></div>
+                }
+            </NavLink>
+        </div>
+
+        <!-- Profile -->
+        <div class="nav-item @(IsActive("/account/profile") ? "active" : "")" @onclick="() => NavigateToProfile()">
+            <NavLink href="account/profile" class="nav-link">
+                <div class="nav-icon-wrapper">
+                    <i class="bi bi-person-circle nav-icon"></i>
+                    @if (!IsCollapsed)
+                    {
+                        <span class="nav-text">Profile</span>
+                    }
+                    else
+                    {
+                        <span class="nav-tooltip">Profile</span>
+                    }
+                </div>
+                @if (IsActive("/account/profile"))
+                {
+                    <div class="nav-indicator"></div>
+                }
+            </NavLink>
+        </div>
+
+        <!-- Logout -->
+        <div class="nav-item logout-item" @onclick="HandleLogout">
+            <div class="nav-link">
+                <div class="nav-icon-wrapper">
+                    <i class="bi bi-box-arrow-right nav-icon text-danger"></i>
+                    @if (!IsCollapsed)
+                    {
+                        <span class="nav-text text-danger">Logout</span>
+                    }
+                    else
+                    {
+                        <span class="nav-tooltip text-danger">Logout</span>
+                    }
+                </div>
+            </div>
+        </div>
     </nav>
 
     <!-- Recently Viewed Section -->
@@ -120,8 +266,8 @@
 </div>
 
 @code {
-    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Parameter] public ApplicationUserDto? User { get; set; }
+    private ApplicationUserDto? currentUser;
 
     private class RecentlyViewedItem
     {
@@ -136,8 +282,10 @@
     [Parameter] public bool IsMobile { get; set; }
     private List<RecentlyViewedItem> RecentlyViewed { get; set; } = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        currentUser = User ?? await AuthenticationService.GetCurrentUserAsync();
+
         // Track navigation for recently viewed
         Navigation.LocationChanged += OnLocationChanged;
     }
@@ -165,18 +313,18 @@
 
         var title = GetPageTitle(url);
         var icon = GetPageIcon(url);
-        
-        var item = new RecentlyViewedItem 
-        { 
-            Title = title, 
-            Icon = icon, 
-            Url = url, 
+
+        var item = new RecentlyViewedItem
+        {
+            Title = title,
+            Icon = icon,
+            Url = url,
             TimeAgo = "Just now",
             ViewedAt = DateTime.Now
         };
 
         RecentlyViewed.Insert(0, item);
-        
+
         // Keep only last 5 items
         if (RecentlyViewed.Count > 5)
         {
@@ -200,30 +348,34 @@
 
     private string GetPageTitle(string url)
     {
-        if (url == "/products/search" || url.StartsWith("/products/search"))
-            return "Search Products";
-
         return url switch
         {
             "/" => "Dashboard",
-            "/counter" => "Counter",
+            "/products/search" or "/products/search/" => "Search Products",
             "/products" => "Products",
             "/categories" => "Categories",
+            "/admin/users" => "User Management",
+            "/admin/audit" => "Audit Logs",
+            "/admin/reports" => "Reports",
+            "/account/settings" => "Account Settings",
+            "/account/profile" => "Profile",
             _ => "Unknown Page"
         };
     }
 
     private string GetPageIcon(string url)
     {
-        if (url == "/products/search" || url.StartsWith("/products/search"))
-            return "bi-search";
-
         return url switch
         {
             "/" => "bi-house-door-fill",
-            "/counter" => "bi-plus-square-fill",
+            "/products/search" or "/products/search/" => "bi-search",
             "/products" => "bi-box-seam",
             "/categories" => "bi-folder",
+            "/admin/users" => "bi-people",
+            "/admin/audit" => "bi-journal-text",
+            "/admin/reports" => "bi-bar-chart",
+            "/account/settings" => "bi-person-gear",
+            "/account/profile" => "bi-person-circle",
             _ => "bi-circle"
         };
     }
@@ -240,7 +392,18 @@
     private void NavigateToProducts() => Navigation.NavigateTo("/products");
     private void NavigateToCategories() => Navigation.NavigateTo("/categories");
     private void NavigateToSearch() => Navigation.NavigateTo("/products/search");
+    private void NavigateToUserManagement() => Navigation.NavigateTo("/admin/users");
+    private void NavigateToAuditLogs() => Navigation.NavigateTo("/admin/audit");
+    private void NavigateToReports() => Navigation.NavigateTo("/admin/reports");
+    private void NavigateToAccountSettings() => Navigation.NavigateTo("/account/settings");
+    private void NavigateToProfile() => Navigation.NavigateTo("/account/profile");
     private void NavigateToPage(string url) => Navigation.NavigateTo(url);
+
+    private async Task HandleLogout()
+    {
+        await AuthenticationService.LogoutAsync();
+        Navigation.NavigateTo("/auth/login", forceLoad: true);
+    }
 
     public void Dispose()
     {
@@ -386,6 +549,41 @@
         transform: scale(1.1);
     }
 
+    /* Nav separator */
+    .nav-separator {
+        margin: 1rem 0.5rem 0.5rem;
+        padding: 0 0.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding-top: 0.5rem;
+    }
+
+    .nav-separator span {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--sidebar-text, white);
+        opacity: 0.7;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* Logout item styling */
+    .logout-item .nav-link {
+        color: var(--danger-color, #e74c3c);
+    }
+
+    .logout-item .nav-link:hover {
+        background-color: rgba(231, 76, 60, 0.1);
+        color: var(--danger-color, #e74c3c);
+    }
+
+    .logout-item .nav-icon {
+        color: var(--danger-color, #e74c3c);
+    }
+
+    .text-danger {
+        color: var(--danger-color, #e74c3c) !important;
+    }
+
     /* Recently Viewed Section */
     .recently-viewed {
         border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -499,122 +697,6 @@
 
     .mobile-nav .recently-viewed {
         padding: 0.75rem 0.25rem;
-    }
-
-    /* Tablet styles (768px - 1024px) */
-    @@media (min-width: 768px) and (max-width: 1024px) {
-        .nav-link {
-            padding: 0.625rem 0.875rem;
-        }
-
-        .nav-icon {
-            font-size: 1.125rem;
-        }
-
-        .nav-text {
-            font-size: 0.9375rem;
-        }
-
-        .recently-viewed-header {
-            font-size: 0.8125rem;
-        }
-
-        .recent-title {
-            font-size: 0.8125rem;
-        }
-
-        .recent-time {
-            font-size: 0.6875rem;
-        }
-    }
-
-    /* Small screens (max 640px) */
-    @@media (max-width: 640px) {
-        .nav-items {
-            padding: 0.25rem 0;
-        }
-
-        .nav-link {
-            padding: 0.5rem 0.75rem;
-            margin: 0 0.25rem;
-        }
-
-        .nav-icon {
-            font-size: 1rem;
-        }
-
-        .nav-text {
-            font-size: 0.875rem;
-        }
-
-        .recently-viewed {
-            padding: 0.75rem 0.25rem;
-        }
-
-        .recently-viewed-header {
-            font-size: 0.75rem;
-            padding: 0 0.25rem 0.5rem;
-        }
-
-        .recently-viewed-item {
-            padding: 0.375rem 0.5rem;
-        }
-
-        .recent-icon {
-            width: 20px;
-            height: 20px;
-            font-size: 0.75rem;
-        }
-
-        .recent-title {
-            font-size: 0.8125rem;
-        }
-
-        .recent-time {
-            font-size: 0.6875rem;
-        }
-    }
-
-    /* Extra small screens (max 380px) */
-    @@media (max-width: 380px) {
-        .nav-link {
-            padding: 0.5rem;
-        }
-
-        .nav-icon-wrapper {
-            gap: 0.5rem;
-        }
-
-        .nav-text {
-            font-size: 0.8125rem;
-        }
-
-        .recently-viewed-item {
-            gap: 0.375rem;
-        }
-    }
-
-    /* Desktop large screens (min 1920px) */
-    @@media (min-width: 1920px) {
-        .nav-link {
-            padding: 0.875rem 1.25rem;
-        }
-
-        .nav-icon {
-            font-size: 1.375rem;
-        }
-
-        .nav-text {
-            font-size: 1rem;
-        }
-
-        .recently-viewed-header {
-            font-size: 0.9375rem;
-        }
-
-        .recent-title {
-            font-size: 0.9375rem;
-        }
     }
 
     /* High contrast mode support */

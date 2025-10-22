@@ -1,14 +1,19 @@
 @page "/products/search"
 @page "/products/search/{*searchParams}"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 @using BlazorCrudDemo.Web.Components.Search
 @using BlazorCrudDemo.Web.Models
 @using BlazorCrudDemo.Web.Components.Products
 @using BlazorCrudDemo.Web.Services
 @using BlazorCrudDemo.Shared.Models
+@using BlazorCrudDemo.Shared.DTOs
 @using System.Web
 @using Microsoft.AspNetCore.Components
 @inject NavigationManager NavigationManager
 @inject ILogger<ProductSearch> Logger
+@inject IAuthenticationService AuthenticationService
+@inject IAuditService AuditService
 
 <PageTitle>Search Products</PageTitle>
 
@@ -484,6 +489,24 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var currentUser = await AuthenticationService.GetCurrentUserAsync();
+        if (currentUser == null)
+        {
+            NavigationManager.NavigateTo("/auth/login");
+            return;
+        }
+
+        // Log search page access
+        await AuditService.LogUserActivityAsync(
+            currentUser.Id,
+            "SEARCH_PAGE_VIEW",
+            "User accessed product search page",
+            null,
+            null,
+            "Products",
+            GetClientIpAddress(),
+            GetUserAgent());
+
         await LoadCategories();
 
         if (!string.IsNullOrEmpty(SearchParams))
@@ -767,19 +790,15 @@
         }
     }
 
-    // Helper method to highlight search terms in text
-    private MarkupString HighlightSearchTerms(string text, string? searchTerm)
+    private string GetClientIpAddress()
     {
-        if (string.IsNullOrEmpty(searchTerm) || string.IsNullOrEmpty(text))
-            return (MarkupString)HttpUtility.HtmlEncode(text);
+        // In a real implementation, this would get the actual client IP
+        return "unknown";
+    }
 
-        var escapedSearchTerm = System.Text.RegularExpressions.Regex.Escape(searchTerm);
-        var pattern = $"(?i)({escapedSearchTerm})";
-        var highlighted = System.Text.RegularExpressions.Regex.Replace(
-            text,
-            pattern,
-            "<span class=\"highlight\">$1</span>");
-
-        return (MarkupString)highlighted;
+    private string GetUserAgent()
+    {
+        // In a real implementation, this would get the actual user agent
+        return "Blazor Application";
     }
 }

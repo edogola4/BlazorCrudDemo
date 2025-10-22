@@ -1,4 +1,5 @@
 @page "/categories"
+@attribute [Authorize]
 @using System
 @using Microsoft.AspNetCore.Components
 @using BlazorCrudDemo.Shared.DTOs
@@ -9,6 +10,8 @@
 @inject ICategoryService CategoryService
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
+@inject IAuthenticationService AuthenticationService
+@inject IAuditService AuditService
 
 <PageTitle>Categories - Blazor CRUD Demo</PageTitle>
 
@@ -323,6 +326,24 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var currentUser = await AuthenticationService.GetCurrentUserAsync();
+        if (currentUser == null)
+        {
+            Navigation.NavigateTo("/auth/login");
+            return;
+        }
+
+        // Log categories page access
+        await AuditService.LogUserActivityAsync(
+            currentUser.Id,
+            "CATEGORIES_PAGE_VIEW",
+            "User accessed categories page",
+            null,
+            null,
+            "Categories",
+            GetClientIpAddress(),
+            GetUserAgent());
+
         await LoadCategories();
         await LoadCategoryStats();
     }
@@ -531,5 +552,17 @@
     private async Task ShowErrorMessage(string message)
     {
         await JSRuntime.InvokeVoidAsync("showToast", message, "error");
+    }
+
+    private string GetClientIpAddress()
+    {
+        // In a real implementation, this would get the actual client IP
+        return "unknown";
+    }
+
+    private string GetUserAgent()
+    {
+        // In a real implementation, this would get the actual user agent
+        return "Blazor Application";
     }
 }

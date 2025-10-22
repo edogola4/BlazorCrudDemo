@@ -2,10 +2,13 @@ using Microsoft.EntityFrameworkCore;
 using BlazorCrudDemo.Shared.Models;
 using BlazorCrudDemo.Data.Configurations;
 using BlazorCrudDemo.Data.Contexts.Interceptors;
+using BlazorCrudDemo.Data.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 namespace BlazorCrudDemo.Data.Contexts
 {
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         private readonly AuditInterceptor _auditInterceptor;
         private readonly SoftDeleteInterceptor _softDeleteInterceptor;
@@ -22,6 +25,9 @@ namespace BlazorCrudDemo.Data.Contexts
 
         public DbSet<Product> Products { get; set; } = default!;
         public DbSet<Category> Categories { get; set; } = default!;
+        public DbSet<AuditLog> AuditLogs { get; set; } = default!;
+        public DbSet<UserActivity> UserActivities { get; set; } = default!;
+        public DbSet<LoginHistory> LoginHistory { get; set; } = default!;
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -52,6 +58,49 @@ namespace BlazorCrudDemo.Data.Contexts
 
             modelBuilder.Entity<Category>()
                 .HasQueryFilter(c => c.IsActive);
+
+            // Configure audit log relationships
+            modelBuilder.Entity<AuditLog>()
+                .HasOne(a => a.User)
+                .WithMany(u => u.AuditLogs)
+                .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Configure user activity relationships
+            modelBuilder.Entity<UserActivity>()
+                .HasOne(a => a.User)
+                .WithMany(u => u.Activities)
+                .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure login history relationships
+            modelBuilder.Entity<LoginHistory>()
+                .HasOne(l => l.User)
+                .WithMany(u => u.LoginHistory)
+                .HasForeignKey(l => l.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure indexes for better performance
+            modelBuilder.Entity<AuditLog>()
+                .HasIndex(a => a.UserId);
+
+            modelBuilder.Entity<AuditLog>()
+                .HasIndex(a => a.Timestamp);
+
+            modelBuilder.Entity<AuditLog>()
+                .HasIndex(a => new { a.EntityType, a.EntityId });
+
+            modelBuilder.Entity<UserActivity>()
+                .HasIndex(a => a.UserId);
+
+            modelBuilder.Entity<UserActivity>()
+                .HasIndex(a => a.Timestamp);
+
+            modelBuilder.Entity<LoginHistory>()
+                .HasIndex(l => l.UserId);
+
+            modelBuilder.Entity<LoginHistory>()
+                .HasIndex(l => l.LoginTime);
 
             // Seed initial data
             SeedData(modelBuilder);
@@ -175,6 +224,60 @@ namespace BlazorCrudDemo.Data.Contexts
             };
 
             modelBuilder.Entity<Product>().HasData(products);
+
+            // Seed roles
+            var adminRoleId = "admin-role-id";
+            var userRoleId = "user-role-id";
+
+            modelBuilder.Entity<IdentityRole>().HasData(
+                new IdentityRole
+                {
+                    Id = adminRoleId,
+                    Name = "Admin",
+                    NormalizedName = "ADMIN"
+                },
+                new IdentityRole
+                {
+                    Id = userRoleId,
+                    Name = "User",
+                    NormalizedName = "USER"
+                }
+            );
+
+            // Seed admin user
+            var adminUserId = "admin-user-id";
+            var adminEmail = "admin@blazorcrud.com";
+            var adminPassword = "Admin123!"; // In production, this should be hashed
+
+            var adminUser = new ApplicationUser
+            {
+                Id = adminUserId,
+                UserName = adminEmail,
+                NormalizedUserName = adminEmail.ToUpper(),
+                Email = adminEmail,
+                NormalizedEmail = adminEmail.ToUpper(),
+                EmailConfirmed = true,
+                FirstName = "System",
+                LastName = "Administrator",
+                IsActive = true,
+                CreatedDate = DateTime.UtcNow,
+                SecurityStamp = Guid.NewGuid().ToString()
+            };
+
+            // Hash the password (simplified for demo - in production use proper hashing)
+            var passwordHasher = new Microsoft.AspNetCore.Identity.PasswordHasher<ApplicationUser>();
+            adminUser.PasswordHash = passwordHasher.HashPassword(adminUser, adminPassword);
+
+            modelBuilder.Entity<ApplicationUser>().HasData(adminUser);
+
+            // Assign admin role to admin user
+            modelBuilder.Entity<IdentityUserRole<string>>().HasData(
+                new IdentityUserRole<string>
+                {
+                    UserId = adminUserId,
+                    RoleId = adminRoleId
+                }
+            );
         }
     }
 }

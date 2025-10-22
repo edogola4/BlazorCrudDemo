@@ -1,58 +1,79 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.JSInterop;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BlazorCrudDemo.Web.Components.Dashboard;
 using BlazorCrudDemo.Web.Models;
-using Microsoft.JSInterop;
+using BlazorCrudDemo.Web.Services;
+using BlazorCrudDemo.Shared.DTOs;
 
 namespace BlazorCrudDemo.Web.Pages.Dashboard
 {
+    [Authorize]
     public partial class Index : ComponentBase, IDisposable
     {
         [Inject] private ILogger<Index> Logger { get; set; } = default!;
-
-        // Optional: Inject services when you have real data
-        // [Inject] private IDashboardService DashboardService { get; set; } = default!;
-        // [Inject] private IActivityService ActivityService { get; set; } = default!;
         [Inject] private IJSRuntime JS { get; set; } = default!;
         [Inject] private NavigationManager Navigation { get; set; } = default!;
+        [Inject] private IAuthenticationService AuthenticationService { get; set; } = default!;
+        [Inject] private IAuditService AuditService { get; set; } = default!;
 
         private bool isLoading = true;
         private bool hasError = false;
         private string searchQuery = string.Empty;
         private string selectedFilter = "all";
-#pragma warning disable CS0414 // Field is assigned but never used
         private string? errorMessage;
-#pragma warning restore CS0414
         private DashboardStats stats = new();
         private List<ActivityItem> recentActivities = new();
+        private ApplicationUserDto? currentUser;
+
         private IQueryable<ActivityItem> FilteredActivities => recentActivities.AsQueryable()
             .Where(a => string.IsNullOrEmpty(searchQuery) ||
                    a.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
                    a.Description != null && a.Description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
                    a.Type.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
             .Where(a => selectedFilter == "all" || a.Type.Contains(selectedFilter.Replace("s", "").Replace("orders", "order").Replace("categories", "category")));
-        
+
         // Last refresh timestamp
         private DateTime lastRefreshed;
-        
+
         // Auto-refresh timer
         private System.Threading.Timer? autoRefreshTimer;
         private const int AUTO_REFRESH_INTERVAL_MS = 300000; // 5 minutes
-        
+
         // Cancellation token for cleanup
         private System.Threading.CancellationTokenSource? cancellationTokenSource;
 
         protected override async Task OnInitializedAsync()
         {
+            currentUser = await AuthenticationService.GetCurrentUserAsync();
+
+            if (currentUser == null)
+            {
+                Navigation.NavigateTo("/auth/login");
+                return;
+            }
+
+            // Log dashboard access
+            await AuditService.LogUserActivityAsync(
+                currentUser.Id,
+                "DASHBOARD_VIEW",
+                "User accessed dashboard",
+                null,
+                null,
+                "Dashboard",
+                GetClientIpAddress(),
+                GetUserAgent());
+
             cancellationTokenSource = new System.Threading.CancellationTokenSource();
-            
+
             try
             {
                 await LoadDashboardDataAsync();
-                
+
                 // Optional: Enable auto-refresh
                 // StartAutoRefresh();
             }
@@ -109,10 +130,13 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
             {
                 // Simulate API call with realistic delay
                 await Task.Delay(200, cancellationTokenSource?.Token ?? default);
-                
+
                 // TODO: Replace with actual service call
                 // stats = await DashboardService.GetStatsAsync();
-                
+
+                // Generate stats based on user role
+                var isAdmin = currentUser?.Roles.Contains("Admin") == true;
+
                 stats = new DashboardStats
                 {
                     TotalProducts = 1247,
@@ -128,6 +152,12 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
                     TotalRevenue = 45678.90m,
                     RevenueTrend = 22.4m
                 };
+
+                // Add admin-specific stats
+                if (isAdmin)
+                {
+                    // Add admin dashboard stats here if needed
+                }
 
                 Logger.LogInformation("Dashboard stats loaded successfully");
             }
@@ -148,10 +178,13 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
             {
                 // Simulate API call
                 await Task.Delay(400, cancellationTokenSource?.Token ?? default);
-                
+
                 // TODO: Replace with actual service call
                 // recentActivities = await ActivityService.GetRecentAsync(limit: 5);
-                
+
+                // Generate activities based on user role
+                var isAdmin = currentUser?.Roles.Contains("Admin") == true;
+
                 recentActivities = new List<ActivityItem>
                 {
                     new()
@@ -189,36 +222,25 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
                     new()
                     {
                         Type = "user.login",
-                        Title = "Admin logged in",
-                        Description = "Administrator access from 192.168.1.100",
+                        Title = "User logged in",
+                        Description = $"Welcome back, {currentUser?.FirstName ?? currentUser?.Email?.Split('@')[0] ?? "User"}!",
                         Timestamp = DateTime.UtcNow.AddHours(-3),
-                        Link = "/admin/activity"
-                    },
-                    new()
-                    {
-                        Type = "product.created",
-                        Title = "New product added",
-                        Description = "Bluetooth Speaker Mini added to Audio category",
-                        Timestamp = DateTime.UtcNow.AddHours(-5),
-                        Link = "/products/101"
-                    },
-                    new()
-                    {
-                        Type = "order.shipped",
-                        Title = "Order shipped",
-                        Description = "Order #ORD-2024-0145 has been marked as shipped",
-                        Timestamp = DateTime.UtcNow.AddHours(-8),
-                        Link = "/orders/145"
-                    },
-                    new()
-                    {
-                        Type = "category.updated",
-                        Title = "Category updated",
-                        Description = "Electronics category description and SEO metadata updated",
-                        Timestamp = DateTime.UtcNow.AddDays(-1),
-                        Link = "/categories/electronics"
+                        Link = "/account/profile"
                     }
                 };
+
+                // Add admin-specific activities
+                if (isAdmin)
+                {
+                    recentActivities.Add(new ActivityItem
+                    {
+                        Type = "system.alert",
+                        Title = "System maintenance scheduled",
+                        Description = "Database maintenance scheduled for tonight at 2:00 AM",
+                        Timestamp = DateTime.UtcNow.AddHours(-1),
+                        Link = "/admin/system"
+                    });
+                }
 
                 Logger.LogInformation("Recent activities loaded: {Count} items", recentActivities.Count);
             }
@@ -244,7 +266,7 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
             isLoading = true;
             hasError = false;
             errorMessage = null;
-            
+
             // Force UI update to show loading state
             await InvokeAsync(StateHasChanged);
 
@@ -289,7 +311,7 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
 
         private void NavigateToSettings()
         {
-            Navigation.NavigateTo("/settings");
+            Navigation.NavigateTo("/account/settings");
         }
 
         private void NavigateToHome()
@@ -320,6 +342,7 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
                 "category.updated" => "folder-open",
                 "inventory.alert" => "exclamation-triangle",
                 "user.login" => "user",
+                "system.alert" => "cog",
                 _ => "circle"
             };
         }
@@ -336,6 +359,7 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
                 "category.updated" => "info",
                 "inventory.alert" => "danger",
                 "user.login" => "secondary",
+                "system.alert" => "warning",
                 _ => "secondary"
             };
         }
@@ -352,6 +376,7 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
                 "category.updated" => "Updated",
                 "inventory.alert" => "Alert",
                 "user.login" => "Login",
+                "system.alert" => "System",
                 _ => "Activity"
             };
         }
@@ -371,8 +396,20 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
             };
         }
 
+        private string GetClientIpAddress()
+        {
+            // In a real implementation, this would get the actual client IP
+            return "unknown";
+        }
+
+        private string GetUserAgent()
+        {
+            // In a real implementation, this would get the actual user agent
+            return "Blazor Application";
+        }
+
         #region Auto-Refresh Feature (Optional)
-        
+
         private void StartAutoRefresh()
         {
             autoRefreshTimer = new System.Threading.Timer(
@@ -416,10 +453,10 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
                 // Cancel any pending operations
                 cancellationTokenSource?.Cancel();
                 cancellationTokenSource?.Dispose();
-                
+
                 // Stop auto-refresh timer
                 StopAutoRefresh();
-                
+
                 Logger.LogInformation("Dashboard component disposed");
             }
             catch (Exception ex)

@@ -1,8 +1,11 @@
 @inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
+@using BlazorCrudDemo.Web.Services
+@using BlazorCrudDemo.Shared.DTOs
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
+@inject IAuthenticationService AuthenticationService
 
 <div class="layout-container @(IsDarkMode ? "dark-theme" : "light-theme") @(IsMobile ? "mobile-layout" : "desktop-layout")">
     <!-- Sidebar -->
@@ -33,22 +36,55 @@
 
         <!-- Navigation Menu -->
         <div class="sidebar-nav">
-            <NavMenu />
+            <NavMenu User="currentUser" />
         </div>
 
         <!-- User Profile Section -->
         <div class="sidebar-footer">
             <div class="user-profile">
                 <div class="user-avatar">
-                    <i class="bi bi-person-circle"></i>
+                    @if (!string.IsNullOrEmpty(currentUser?.ProfileImageUrl))
+                    {
+                        <img src="@currentUser.ProfileImageUrl" alt="Profile" class="profile-image" />
+                    }
+                    else
+                    {
+                        <i class="bi bi-person-circle"></i>
+                    }
                 </div>
                 @if (!IsSidebarCollapsed)
                 {
                     <div class="user-info">
-                        <div class="user-name">Bran Don</div>
-                        <div class="user-role">Administrator</div>
+                        <div class="user-name">
+                            @(string.IsNullOrEmpty(currentUser?.FirstName + currentUser?.LastName)
+                                ? currentUser?.Email?.Split('@')[0] ?? "User"
+                                : $"{currentUser?.FirstName} {currentUser?.LastName}")
+                        </div>
+                        <div class="user-role">
+                            @(currentUser?.Roles?.FirstOrDefault() ?? "User")
+                        </div>
                     </div>
                 }
+                <div class="dropdown">
+                    <button class="btn btn-link dropdown-toggle" type="button" @onclick="ToggleUserMenu" @onclick:stopPropagation>
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    @if (showUserMenu)
+                    {
+                        <div class="dropdown-menu dropdown-menu-end show">
+                            <a class="dropdown-item" href="/account/settings">
+                                <i class="bi bi-person-gear me-2"></i>Account Settings
+                            </a>
+                            <a class="dropdown-item" href="/admin/users" @onclick:preventDefault="true" @onclick="NavigateToUserManagement">
+                                <i class="bi bi-people me-2"></i>User Management
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item text-danger" href="#" @onclick:preventDefault="true" @onclick="HandleLogout">
+                                <i class="bi bi-box-arrow-right me-2"></i>Logout
+                            </a>
+                        </div>
+                    }
+                </div>
             </div>
         </div>
     </aside>
@@ -92,15 +128,20 @@
 <SearchCommandPalette @bind-Visible="ShowSearchPalette" OnCommandSelected="HandleCommandSelected" />
 
 @code {
-    private bool IsSidebarCollapsed { get; set; }
     private bool IsDarkMode { get; set; }
     private bool IsMobile { get; set; }
+    private bool IsSidebarCollapsed { get; set; }
     private bool ShowMobileMenu { get; set; }
     private bool ShowSearchPalette { get; set; }
     private int NotificationCount { get; set; } = 3;
+    private bool showUserMenu = false;
+    private ApplicationUserDto? currentUser;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        // Load current user
+        currentUser = await AuthenticationService.GetCurrentUserAsync();
+
         // Initialize theme from localStorage or default to light
         IsDarkMode = GetStoredTheme();
         IsMobile = false; // Default to desktop, will be updated in OnAfterRenderAsync
@@ -200,6 +241,25 @@
         InvokeAsync(StateHasChanged);
     }
 
+    private void ToggleUserMenu()
+    {
+        showUserMenu = !showUserMenu;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleLogout()
+    {
+        await AuthenticationService.LogoutAsync();
+        Navigation.NavigateTo("/auth/login", forceLoad: true);
+    }
+
+    private void NavigateToUserManagement()
+    {
+        Navigation.NavigateTo("/admin/users");
+        showUserMenu = false;
+        InvokeAsync(StateHasChanged);
+    }
+
     private void CloseMobileMenu()
     {
         ShowMobileMenu = false;
@@ -266,6 +326,7 @@
         padding: var(--space-2);
         border-radius: var(--radius-lg);
         transition: var(--transition-colors);
+        position: relative;
     }
 
     .user-profile:hover {
@@ -283,6 +344,14 @@
         color: white;
         font-size: 1.25rem;
         flex-shrink: 0;
+        overflow: hidden;
+    }
+
+    .profile-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
     }
 
     .user-info {
@@ -305,5 +374,32 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+    }
+
+    .dropdown-menu {
+        min-width: 200px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .dropdown-item {
+        padding: 0.5rem 1rem;
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+        color: var(--primary-700);
+    }
+
+    .dropdown-item:hover {
+        background-color: var(--primary-50);
+        color: var(--primary-900);
+    }
+
+    .dropdown-item.text-danger {
+        color: var(--danger-600) !important;
+    }
+
+    .dropdown-item.text-danger:hover {
+        background-color: var(--danger-50);
+        color: var(--danger-700) !important;
     }
 </style>

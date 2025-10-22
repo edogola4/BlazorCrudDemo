@@ -1,0 +1,594 @@
+@page "/account/settings"
+@attribute [Authorize]
+@using BlazorCrudDemo.Web.Services
+@using BlazorCrudDemo.Shared.DTOs
+@using Microsoft.AspNetCore.Authorization
+@inject IAuthenticationService AuthenticationService
+@inject IUserService UserService
+@inject IAuditService AuditService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Account Settings</PageTitle>
+
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex align-items-center mb-2">
+                <button class="btn btn-link p-0 me-3" @onclick="GoBack">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+                <div>
+                    <h1 class="h3 mb-0 text-gray-800">Account Settings</h1>
+                    <p class="text-muted">Manage your account information and preferences</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Profile Information -->
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="bi bi-person-circle me-2"></i>Profile Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="profileModel" OnValidSubmit="SaveProfile">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">First Name</label>
+                                <InputText class="form-control" @bind-Value="profileModel.FirstName" />
+                                <ValidationMessage For="() => profileModel.FirstName" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Last Name</label>
+                                <InputText class="form-control" @bind-Value="profileModel.LastName" />
+                                <ValidationMessage For="() => profileModel.LastName" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Email Address</label>
+                            <InputText class="form-control" @bind-Value="profileModel.Email" />
+                            <ValidationMessage For="() => profileModel.Email" />
+                            <div class="form-text">
+                                Changing your email will require email verification.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Profile Image URL</label>
+                            <InputText class="form-control" @bind-Value="profileModel.ProfileImageUrl" />
+                            <ValidationMessage For="() => profileModel.ProfileImageUrl" />
+                            <div class="form-text">
+                                Enter a URL to an image (optional)
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                                @if (isSaving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                Save Changes
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+
+            <!-- Security Settings -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="bi bi-shield-check me-2"></i>Security
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-warning" @onclick="ShowChangePasswordModal">
+                            <i class="bi bi-key me-2"></i>Change Password
+                        </button>
+                        <button class="btn btn-outline-info" @onclick="ShowTwoFactorModal">
+                            <i class="bi bi-shield me-2"></i>Two-Factor Authentication
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Account Activity -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="bi bi-activity me-2"></i>Account Activity
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Account Created</label>
+                                <div class="fw-medium">@currentUser?.CreatedDate.ToString("MMM dd, yyyy 'at' HH:mm")</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Last Login</label>
+                                <div class="fw-medium">
+                                    @(currentUser?.LastLoginDate.HasValue == true
+                                        ? currentUser.LastLoginDate.Value.ToString("MMM dd, yyyy 'at' HH:mm")
+                                        : "Never")
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Recent Activity</span>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="ViewActivityHistory">
+                            <i class="bi bi-eye me-1"></i>View All
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Account Status -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="bi bi-info-circle me-2"></i>Account Status
+                    </h6>
+                </div>
+                <div class="card-body text-center">
+                    <div class="user-avatar-large mb-3">
+                        @if (!string.IsNullOrEmpty(currentUser?.ProfileImageUrl))
+                        {
+                            <img src="@currentUser.ProfileImageUrl" alt="Profile" class="profile-image-large" />
+                        }
+                        else
+                        {
+                            <i class="bi bi-person-circle"></i>
+                        }
+                    </div>
+
+                    <h5 class="mb-1">
+                        @(string.IsNullOrEmpty(currentUser?.FirstName + currentUser?.LastName)
+                            ? currentUser?.Email?.Split('@')[0] ?? "User"
+                            : $"{currentUser?.FirstName} {currentUser?.LastName}")
+                    </h5>
+
+                    <p class="text-muted mb-3">@currentUser?.Email</p>
+
+                    <div class="d-flex justify-content-center gap-2 mb-3">
+                        @foreach (var role in currentUser?.Roles ?? new List<string>())
+                        {
+                            <span class="badge @(role == "Admin" ? "bg-danger" : "bg-primary")">@role</span>
+                        }
+                    </div>
+
+                    <div class="form-check form-switch">
+                        <InputCheckbox class="form-check-input" @bind-Value="profileModel.IsActive" disabled="@(!isAdmin)" />
+                        <label class="form-check-label">
+                            @(profileModel.IsActive ? "Account Active" : "Account Inactive")
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="bi bi-lightning me-2"></i>Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-success" @onclick="RefreshProfile">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Refresh Profile
+                        </button>
+                        @if (isAdmin)
+                        {
+                            <button class="btn btn-outline-warning" @onclick="ShowAdminSettingsModal">
+                                <i class="bi bi-gear me-2"></i>Admin Settings
+                            </button>
+                        }
+                        <button class="btn btn-outline-danger" @onclick="ShowDeleteAccountModal">
+                            <i class="bi bi-trash me-2"></i>Delete Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+@if (showChangePasswordModal)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Change Password</h5>
+                    <button type="button" class="btn-close" @onclick="CloseChangePasswordModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="passwordModel" OnValidSubmit="HandleChangePassword">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="mb-3">
+                            <label class="form-label">Current Password</label>
+                            <InputText type="password" class="form-control" @bind-Value="passwordModel.CurrentPassword" />
+                            <ValidationMessage For="() => passwordModel.CurrentPassword" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">New Password</label>
+                            <InputText type="password" class="form-control" @bind-Value="passwordModel.NewPassword" />
+                            <ValidationMessage For="() => passwordModel.NewPassword" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Confirm New Password</label>
+                            <InputText type="password" class="form-control" @bind-Value="passwordModel.ConfirmNewPassword" />
+                            <ValidationMessage For="() => passwordModel.ConfirmNewPassword" />
+                        </div>
+                    </EditForm>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseChangePasswordModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="HandleChangePassword" disabled="@isChangingPassword">
+                        @if (isChangingPassword)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Change Password
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Two-Factor Modal -->
+@if (showTwoFactorModal)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Two-Factor Authentication</h5>
+                    <button type="button" class="btn-close" @onclick="CloseTwoFactorModal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <i class="bi bi-shield-check display-4 text-success mb-3"></i>
+                    <h6>Two-Factor Authentication</h6>
+                    <p class="text-muted">Two-factor authentication is not currently configured for this account.</p>
+                    <button class="btn btn-primary" @onclick="SetupTwoFactor">
+                        Set Up Two-Factor Authentication
+                    </button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseTwoFactorModal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Account Modal -->
+@if (showDeleteAccountModal)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">Delete Account</h5>
+                    <button type="button" class="btn-close" @onclick="CloseDeleteAccountModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        <i class="bi bi-exclamation-triangle display-4 text-danger"></i>
+                    </div>
+                    <h6 class="text-danger">Warning: This action cannot be undone!</h6>
+                    <p class="text-muted">
+                        Deleting your account will permanently remove all your data, including:
+                    </p>
+                    <ul class="text-muted">
+                        <li>Your profile information</li>
+                        <li>All activity history</li>
+                        <li>Any associated data</li>
+                    </ul>
+                    <p class="text-muted">
+                        This action is irreversible. Please contact support if you need help.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteAccountModal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="HandleDeleteAccount">
+                        @if (isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Delete Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private ApplicationUserDto? currentUser;
+    private UpdateUserDto profileModel = new();
+    private ChangePasswordDto passwordModel = new();
+    private bool isSaving = false;
+    private bool isChangingPassword = false;
+    private bool isDeleting = false;
+    private bool isAdmin = false;
+    private bool showChangePasswordModal = false;
+    private bool showTwoFactorModal = false;
+    private bool showDeleteAccountModal = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentUser = await AuthenticationService.GetCurrentUserAsync();
+        if (currentUser == null)
+        {
+            Navigation.NavigateTo("/auth/login");
+            return;
+        }
+
+        isAdmin = currentUser.Roles.Contains("Admin");
+
+        // Initialize profile model
+        profileModel = new UpdateUserDto
+        {
+            FirstName = currentUser.FirstName,
+            LastName = currentUser.LastName,
+            Email = currentUser.Email,
+            ProfileImageUrl = currentUser.ProfileImageUrl,
+            IsActive = currentUser.IsActive
+        };
+
+        // Log account settings access
+        await AuditService.LogUserActivityAsync(
+            currentUser.Id,
+            "ACCOUNT_SETTINGS_VIEW",
+            "User accessed account settings",
+            null,
+            null,
+            "Account",
+            GetClientIpAddress(),
+            GetUserAgent());
+    }
+
+    private async Task SaveProfile()
+    {
+        if (currentUser == null) return;
+
+        isSaving = true;
+        try
+        {
+            var result = await UserService.UpdateUserAsync(currentUser.Id, profileModel, currentUser.Id);
+            if (result.Success)
+            {
+                // Refresh current user data
+                currentUser = await AuthenticationService.GetCurrentUserAsync();
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                // Show error
+            }
+        }
+        catch (Exception ex)
+        {
+            // Handle error
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void ShowChangePasswordModal()
+    {
+        passwordModel = new ChangePasswordDto();
+        showChangePasswordModal = true;
+    }
+
+    private void CloseChangePasswordModal()
+    {
+        showChangePasswordModal = false;
+        passwordModel = new ChangePasswordDto();
+    }
+
+    private async Task HandleChangePassword()
+    {
+        if (currentUser == null) return;
+
+        isChangingPassword = true;
+        try
+        {
+            var result = await AuthenticationService.ChangePasswordAsync(
+                currentUser.Id,
+                passwordModel.CurrentPassword,
+                passwordModel.NewPassword);
+
+            if (result.Success)
+            {
+                CloseChangePasswordModal();
+                // Show success message
+            }
+            else
+            {
+                // Show error
+            }
+        }
+        catch (Exception ex)
+        {
+            // Handle error
+        }
+        finally
+        {
+            isChangingPassword = false;
+        }
+    }
+
+    private void ShowTwoFactorModal()
+    {
+        showTwoFactorModal = true;
+    }
+
+    private void CloseTwoFactorModal()
+    {
+        showTwoFactorModal = false;
+    }
+
+    private async Task SetupTwoFactor()
+    {
+        // In a real implementation, this would set up 2FA
+        await JSRuntime.InvokeVoidAsync("alert", "Two-factor authentication setup would be implemented here");
+        CloseTwoFactorModal();
+    }
+
+    private void ShowDeleteAccountModal()
+    {
+        showDeleteAccountModal = true;
+    }
+
+    private void CloseDeleteAccountModal()
+    {
+        showDeleteAccountModal = false;
+    }
+
+    private async Task HandleDeleteAccount()
+    {
+        if (currentUser == null) return;
+
+        isDeleting = true;
+        try
+        {
+            // In a real implementation, this would delete the account
+            await JSRuntime.InvokeVoidAsync("alert", "Account deletion would be implemented here");
+            CloseDeleteAccountModal();
+        }
+        catch (Exception ex)
+        {
+            // Handle error
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+    }
+
+    private async Task RefreshProfile()
+    {
+        currentUser = await AuthenticationService.GetCurrentUserAsync();
+        profileModel = new UpdateUserDto
+        {
+            FirstName = currentUser?.FirstName,
+            LastName = currentUser?.LastName,
+            Email = currentUser?.Email,
+            ProfileImageUrl = currentUser?.ProfileImageUrl,
+            IsActive = currentUser?.IsActive ?? true
+        };
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ShowAdminSettingsModal()
+    {
+        // In a real implementation, this would show admin settings
+        Navigation.NavigateTo("/admin/users");
+    }
+
+    private void ViewActivityHistory()
+    {
+        Navigation.NavigateTo("/account/activity");
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private string GetClientIpAddress()
+    {
+        // In a real implementation, this would get the actual client IP
+        return "unknown";
+    }
+
+    private string GetUserAgent()
+    {
+        // In a real implementation, this would get the actual user agent
+        return "Blazor Application";
+    }
+}
+
+<style>
+    .user-avatar-large {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2rem;
+        flex-shrink: 0;
+        overflow: hidden;
+        margin: 0 auto;
+    }
+
+    .profile-image-large {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+    .modal-content {
+        border-radius: 0.5rem;
+        border: none;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    .form-check-input:checked {
+        background-color: var(--primary-600);
+        border-color: var(--primary-600);
+    }
+
+    .btn-outline-primary:hover {
+        background-color: var(--primary-50);
+        border-color: var(--primary-600);
+        color: var(--primary-700);
+    }
+
+    .btn-outline-warning:hover {
+        background-color: var(--warning-50);
+        border-color: var(--warning-600);
+        color: var(--warning-700);
+    }
+
+    .btn-outline-danger:hover {
+        background-color: var(--danger-50);
+        border-color: var(--danger-600);
+        color: var(--danger-700);
+    }
+</style>
