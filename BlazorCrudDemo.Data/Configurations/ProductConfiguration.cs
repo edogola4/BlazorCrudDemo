@@ -83,8 +83,11 @@ namespace BlazorCrudDemo.Data.Configurations
                 .HasDatabaseName("IX_Products_CategoryId_IsActive");
 
             // Check constraints
-            builder.HasCheckConstraint("CK_Products_Price_Positive", "[Price] > 0");
-            builder.HasCheckConstraint("CK_Products_Stock_NonNegative", "[Stock] >= 0");
+            builder.ToTable(t =>
+            {
+                t.HasCheckConstraint("CK_Products_Price_Positive", "[Price] > 0");
+                t.HasCheckConstraint("CK_Products_Stock_NonNegative", "[Stock] >= 0");
+            });
 
             // Foreign key relationship (configured in context for cascade behavior)
             builder.HasOne(p => p.Category)

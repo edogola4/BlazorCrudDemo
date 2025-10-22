@@ -61,7 +61,7 @@ namespace BlazorCrudDemo.Data.Configurations
                 .HasDatabaseName("IX_Categories_IsActive");
 
             // Check constraints
-            builder.HasCheckConstraint("CK_Categories_DisplayOrder_NonNegative", "[DisplayOrder] >= 0");
+            builder.ToTable(t => t.HasCheckConstraint("CK_Categories_DisplayOrder_NonNegative", "[DisplayOrder] >= 0"));
 
             // Relationship back-reference (Products collection)
             // This is configured in the Product entity configuration
