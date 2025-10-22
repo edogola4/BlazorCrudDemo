@@ -55,14 +55,20 @@ public class EntityNotFoundException : RepositoryException
     /// Initializes a new instance of the EntityNotFoundException class.
     /// </summary>
     /// <param name="message">The error message that explains the reason for the exception.</param>
-    public EntityNotFoundException(string message) : base(message) { }
+    public EntityNotFoundException(string message) : base(message)
+    {
+        EntityType = "Unknown";
+    }
 
     /// <summary>
     /// Initializes a new instance of the EntityNotFoundException class.
     /// </summary>
     /// <param name="message">The error message that explains the reason for the exception.</param>
     /// <param name="innerException">The exception that is the cause of the current exception.</param>
-    public EntityNotFoundException(string message, Exception innerException) : base(message, innerException) { }
+    public EntityNotFoundException(string message, Exception innerException) : base(message, innerException)
+    {
+        EntityType = "Unknown";
+    }
 }
 
 /// <summary>
@@ -103,14 +109,24 @@ public class DuplicateEntityException : RepositoryException
     /// Initializes a new instance of the DuplicateEntityException class.
     /// </summary>
     /// <param name="message">The error message that explains the reason for the exception.</param>
-    public DuplicateEntityException(string message) : base(message) { }
+    public DuplicateEntityException(string message) : base(message)
+    {
+        EntityType = "Unknown";
+        FieldName = "Unknown";
+        DuplicateValue = "Unknown";
+    }
 
     /// <summary>
     /// Initializes a new instance of the DuplicateEntityException class.
     /// </summary>
     /// <param name="message">The error message that explains the reason for the exception.</param>
     /// <param name="innerException">The exception that is the cause of the current exception.</param>
-    public DuplicateEntityException(string message, Exception innerException) : base(message, innerException) { }
+    public DuplicateEntityException(string message, Exception innerException) : base(message, innerException)
+    {
+        EntityType = "Unknown";
+        FieldName = "Unknown";
+        DuplicateValue = "Unknown";
+    }
 }
 
 /// <summary>
@@ -186,12 +202,18 @@ public class ConcurrencyException : RepositoryException
     /// Initializes a new instance of the ConcurrencyException class.
     /// </summary>
     /// <param name="message">The error message that explains the reason for the exception.</param>
-    public ConcurrencyException(string message) : base(message) { }
+    public ConcurrencyException(string message) : base(message)
+    {
+        EntityType = "Unknown";
+    }
 
     /// <summary>
     /// Initializes a new instance of the ConcurrencyException class.
     /// </summary>
     /// <param name="message">The error message that explains the reason for the exception.</param>
     /// <param name="innerException">The exception that is the cause of the current exception.</param>
-    public ConcurrencyException(string message, Exception innerException) : base(message, innerException) { }
+    public ConcurrencyException(string message, Exception innerException) : base(message, innerException)
+    {
+        EntityType = "Unknown";
+    }
 }

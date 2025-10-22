@@ -27,7 +27,7 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
     public override async Task<IEnumerable<Product>> GetAllAsync()
     {
         var products = await base.GetAllAsync(p => p.Category);
-        return products ?? Enumerable.Empty<Product>();
+        return products;
     }
 
     /// <inheritdoc />
@@ -79,9 +79,9 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 query = query.Where(p =>
-                    p.Name.Contains(searchTerm) ||
-                    p.Description.Contains(searchTerm) ||
-                    p.SKU.Contains(searchTerm));
+                    p.Name.Contains(searchTerm!) ||
+                    p.Description.Contains(searchTerm!) ||
+                    p.SKU.Contains(searchTerm!));
             }
 
             // Apply category filter
