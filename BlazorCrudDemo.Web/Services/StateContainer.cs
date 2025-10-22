@@ -478,6 +478,7 @@ public class StateContainer : IStateContainer
             // In a real implementation, you would save to localStorage or a backend service
             // For now, we'll just log the operation
             Console.WriteLine("State saved to storage");
+            await Task.CompletedTask;
         }
         catch (Exception ex)
         {
@@ -493,6 +494,7 @@ public class StateContainer : IStateContainer
             // In a real implementation, you would load from localStorage or a backend service
             // For now, we'll just log the operation
             Console.WriteLine("State loaded from storage");
+            await Task.CompletedTask;
         }
         catch (Exception ex)
         {

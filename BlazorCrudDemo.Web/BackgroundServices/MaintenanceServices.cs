@@ -101,6 +101,7 @@ public class MaintenanceBackgroundService : BackgroundService
             GC.Collect();
 
             _logger.LogDebug("Cache cleanup completed");
+            await Task.CompletedTask;
         }
         catch (Exception ex)
         {
@@ -185,6 +186,7 @@ public class MaintenanceBackgroundService : BackgroundService
             _logger.LogInformation("Cache Statistics - Entries: {EntryCount}, Size: {SizeEstimate} bytes",
                 cacheStats.EntryCount, cacheStats.SizeEstimate);
 
+            await Task.CompletedTask;
         }
         catch (Exception ex)
         {
@@ -208,6 +210,7 @@ public class MaintenanceBackgroundService : BackgroundService
 
             var tempPath = Path.GetTempPath();
             _logger.LogDebug("Temporary files cleanup completed for path: {TempPath}", tempPath);
+            await Task.CompletedTask;
         }
         catch (Exception ex)
         {
@@ -381,6 +384,7 @@ public class CacheCleanupBackgroundService : BackgroundService
             // or perform other cache maintenance operations
 
             _logger.LogInformation("Cache cleanup completed successfully");
+            await Task.CompletedTask;
         }
         catch (Exception ex)
         {

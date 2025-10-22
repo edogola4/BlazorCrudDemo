@@ -136,9 +136,9 @@ namespace BlazorCrudDemo.Web.Services
             // 1. Check a search suggestions table/cache
             // 2. Fall back to generating suggestions from the data
             // 3. Consider using a dedicated search service like Elasticsearch or Azure Search
-            
+
             var suggestions = new List<string>();
-            
+
             // Add some example suggestions
             if (query.StartsWith("pro", StringComparison.OrdinalIgnoreCase))
             {
@@ -146,14 +146,16 @@ namespace BlazorCrudDemo.Web.Services
                 suggestions.Add("products");
                 suggestions.Add("product category");
             }
-            
+
             // Ensure we don't return more than the max suggestions
+            await Task.CompletedTask;
             return suggestions.Take(_maxSuggestions);
         }
 
         public async Task<IEnumerable<string>> GetPopularSearchesAsync(int count = 5)
         {
             // In a real application, this would come from a search log or analytics
+            await Task.CompletedTask;
             return new List<string>
             {
                 "laptop",

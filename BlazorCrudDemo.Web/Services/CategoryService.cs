@@ -425,6 +425,7 @@ public class CategoryService : ICategoryService
             errors["General"] = errorMessages.ToArray();
         }
 
+        await Task.CompletedTask;
         return new ValidationResult(!errors.Any(), errors);
     }
 

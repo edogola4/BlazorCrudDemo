@@ -322,6 +322,7 @@ public class BusinessValidationService : IBusinessValidationService
             result.AddError(nameof(createDto.SKU), "SKU must follow the format: XXX-XXX-XXX (3 letters, dash, 3 letters, dash, 3 digits)");
         }
 
+        await Task.CompletedTask;
         return result;
     }
 
@@ -541,6 +542,7 @@ public class BusinessValidationService : IBusinessValidationService
                 break;
         }
 
+        await Task.CompletedTask;
         return result;
     }
 
