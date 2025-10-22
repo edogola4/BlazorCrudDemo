@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BlazorCrudDemo.Data.Models
 {
@@ -23,8 +24,9 @@ namespace BlazorCrudDemo.Data.Models
 
         public TimeSpan? SessionDuration { get; set; }
 
-        // Foreign key
-        public string UserId { get; set; } = string.Empty;
+        // Foreign key - make this required and don't default to empty string
+        [Required]
+        public string UserId { get; set; } = default!;
 
         // Navigation property
         public ApplicationUser? User { get; set; }
