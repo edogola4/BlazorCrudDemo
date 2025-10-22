@@ -1,5 +1,5 @@
 @page "/categories"
-@attribute [Authorize]
+// Removed [Authorize] attribute to disable authentication
 @using System
 @using Microsoft.AspNetCore.Components
 @using BlazorCrudDemo.Shared.DTOs
@@ -326,23 +326,23 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var currentUser = await AuthenticationService.GetCurrentUserAsync();
-        if (currentUser == null)
-        {
-            Navigation.NavigateTo("/auth/login");
-            return;
-        }
+        // var currentUser = await AuthenticationService.GetCurrentUserAsync();
+        // if (currentUser == null)
+        // {
+        //     Navigation.NavigateTo("/auth/login");
+        //     return;
+        // }
 
         // Log categories page access
-        await AuditService.LogUserActivityAsync(
-            currentUser.Id,
-            "CATEGORIES_PAGE_VIEW",
-            "User accessed categories page",
-            null,
-            null,
-            "Categories",
-            GetClientIpAddress(),
-            GetUserAgent());
+        // await AuditService.LogUserActivityAsync(
+        //     currentUser.Id,
+        //     "CATEGORIES_PAGE_VIEW",
+        //     "User accessed categories page",
+        //     null,
+        //     null,
+        //     "Categories",
+        //     GetClientIpAddress(),
+        //     GetUserAgent());
 
         await LoadCategories();
         await LoadCategoryStats();
