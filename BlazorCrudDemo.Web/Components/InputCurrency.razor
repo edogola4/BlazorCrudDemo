@@ -1,5 +1,6 @@
 @using System.Globalization
 @using System.Diagnostics.CodeAnalysis
+@using BlazorCrudDemo.Web.Utilities
 @inherits InputBase<decimal>
 
 <div class="form-floating mb-3">
@@ -26,7 +27,7 @@
     [Parameter] public string Label { get; set; } = "Price";
     [Parameter] public string Placeholder { get; set; } = "0.00";
     [Parameter] public string HelpText { get; set; } = "";
-    [Parameter] public CultureInfo Culture { get; set; } = CultureInfo.CurrentCulture;
+    [Parameter] public CultureInfo Culture { get; set; } = CurrencyFormatter.GetKenyanCulture();
     [Parameter] public new EventCallback<decimal> ValueChanged { get; set; }
 
     private string FormattedValue => CurrentValue.ToString("C", Culture);
