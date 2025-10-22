@@ -65,13 +65,13 @@
                         </div>
                     </div>
                 }
-                <div class="dropdown">
+                <div class="dropdown" style="position: relative;">
                     <button class="btn btn-link dropdown-toggle" type="button" @onclick="ToggleUserMenu" @onclick:stopPropagation>
                         <i class="bi bi-three-dots-vertical"></i>
                     </button>
                     @if (showUserMenu)
                     {
-                        <div class="dropdown-menu dropdown-menu-end show">
+                        <div class="dropdown-menu show">
                             <a class="dropdown-item" href="/account/settings">
                                 <i class="bi bi-person-gear me-2"></i>Account Settings
                             </a>
@@ -296,7 +296,7 @@
     .brand-icon {
         width: 2.5rem;
         height: 2.5rem;
-        background: linear-gradient(135deg, var(--accent-600) 0%, var(--accent-700) 100%);
+        background: #1e3a8a;
         border-radius: var(--radius-lg);
         display: flex;
         align-items: center;
@@ -309,7 +309,7 @@
     .sidebar-icon-large {
         width: 2.5rem;
         height: 2.5rem;
-        background: linear-gradient(135deg, var(--accent-600) 0%, var(--accent-700) 100%);
+        background: #1e3a8a;
         border-radius: var(--radius-lg);
         display: flex;
         align-items: center;
@@ -330,14 +330,14 @@
     }
 
     .user-profile:hover {
-        background: var(--primary-100);
+        background: #334155;
     }
 
     .user-avatar {
         width: 2.5rem;
         height: 2.5rem;
         border-radius: 50%;
-        background: linear-gradient(135deg, var(--accent-600) 0%, var(--accent-700) 100%);
+        background: #1e3a8a;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -361,7 +361,7 @@
 
     .user-name {
         font-weight: var(--font-weight-semibold);
-        color: var(--primary-900);
+        color: #f8fafc;
         font-size: var(--font-size-sm);
         white-space: nowrap;
         overflow: hidden;
@@ -370,7 +370,7 @@
 
     .user-role {
         font-size: var(--font-size-xs);
-        color: var(--primary-600);
+        color: #cbd5e1;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -378,28 +378,44 @@
 
     .dropdown-menu {
         min-width: 200px;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        box-shadow: var(--shadow-lg);
+        position: absolute;
+        bottom: 100%;
+        right: 0;
+        margin-bottom: 0.5rem;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--radius-lg);
+        z-index: 1001;
     }
 
     .dropdown-item {
-        padding: 0.5rem 1rem;
+        padding: 0.75rem 1rem;
         display: flex;
         align-items: center;
         text-decoration: none;
-        color: var(--primary-700);
+        color: #374151;
+        font-size: 0.875rem;
+        transition: background-color 0.2s ease;
     }
 
     .dropdown-item:hover {
-        background-color: var(--primary-50);
-        color: var(--primary-900);
+        background-color: #f8fafc;
+        color: #0f172a;
     }
 
     .dropdown-item.text-danger {
-        color: var(--danger-600) !important;
+        color: #dc2626 !important;
     }
 
     .dropdown-item.text-danger:hover {
-        background-color: var(--danger-50);
-        color: var(--danger-700) !important;
+        background-color: #fef2f2;
+        color: #dc2626 !important;
+    }
+
+    .dropdown-divider {
+        height: 1px;
+        background: #e2e8f0;
+        margin: 0.5rem 0;
     }
 </style>

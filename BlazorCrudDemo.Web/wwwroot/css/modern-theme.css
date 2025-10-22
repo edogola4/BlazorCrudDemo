@@ -232,8 +232,8 @@ textarea:focus-visible {
 /* Sidebar Styles */
 .sidebar {
     width: 280px;
-    background: var(--surface-50);
-    border-right: 1px solid var(--primary-200);
+    background: #0f172a;
+    border-right: 1px solid #334155;
     display: flex;
     flex-direction: column;
     transition: all var(--transition-normal);
@@ -254,8 +254,8 @@ textarea:focus-visible {
     align-items: center;
     justify-content: space-between;
     padding: var(--space-6) var(--space-6) var(--space-4);
-    border-bottom: 1px solid var(--primary-200);
-    background: var(--surface-50);
+    border-bottom: 1px solid #334155;
+    background: #0f172a;
 }
 
 .sidebar-logo {
@@ -267,7 +267,7 @@ textarea:focus-visible {
 .sidebar-title {
     font-size: var(--font-size-xl);
     font-weight: var(--font-weight-semibold);
-    color: var(--primary-900);
+    color: #f8fafc;
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
@@ -282,24 +282,22 @@ textarea:focus-visible {
     height: 2.5rem;
     border-radius: var(--radius-lg);
     background: transparent;
-    border: 1px solid var(--primary-200);
-    color: var(--primary-600);
+    border: 1px solid #334155;
+    color: #cbd5e1;
     cursor: pointer;
     transition: var(--transition-colors);
 }
 
 .sidebar-toggle-btn:hover {
-    background: var(--primary-100);
-    color: var(--primary-900);
-    border-color: var(--primary-300);
+    background: #334155;
+    color: #f8fafc;
+    border-color: #475569;
 }
 
-.sidebar-nav {
-    flex: 1;
-    overflow-y: auto;
-    padding: var(--space-4) var(--space-2);
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary-300) transparent;
+.sidebar-footer {
+    border-top: 1px solid #334155;
+    padding: 1rem;
+    margin-top: auto;
 }
 
 /* Main Content */
@@ -329,7 +327,6 @@ textarea:focus-visible {
     top: 0;
     z-index: var(--z-sticky);
     height: 72px;
-    backdrop-filter: blur(8px);
     box-shadow: var(--shadow-sm);
 }
 
@@ -751,16 +748,16 @@ textarea:focus-visible {
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--primary-100);
+    background: #1e293b;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--primary-300);
-    border-radius: var(--radius-sm);
+    background: #475569;
+    border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-400);
+    background: #64748b;
 }
 
 /* Dark Theme Overrides */
@@ -806,7 +803,7 @@ textarea:focus-visible {
 [data-theme="dark"] .form-control:focus {
     background-color: var(--surface-200);
     border-color: var(--accent-400);
-    box-shadow: 0 0 0 2px rgb(99 102 241 / 0.15);
+    box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.15);
 }
 
 [data-theme="dark"] .table th {
