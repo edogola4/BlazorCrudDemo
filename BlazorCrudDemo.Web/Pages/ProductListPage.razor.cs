@@ -155,6 +155,8 @@ public partial class ProductListPage : ComponentBase, IDisposable
             });
         };
         _searchTimer.Start();
+
+        await Task.CompletedTask;
     }
 
     private void NavigateToCreate()

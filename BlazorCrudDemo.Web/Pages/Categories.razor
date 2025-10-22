@@ -393,9 +393,10 @@
             _ => filtered.OrderBy(c => c.DisplayOrder).ThenBy(c => c.Name)
         };
 
+        await Task.CompletedTask;
     }
 
-    private async void ClearSearch()
+    private async Task ClearSearch()
     {
         SearchTerm = "";
         await ApplyFiltersAndSorting();
