@@ -1,9 +1,8 @@
+@using BlazorCrudDemo.Web.Utilities
 @page "/products"
 @using BlazorCrudDemo.Shared.DTOs
 @using BlazorCrudDemo.Web.Services
 @using BlazorCrudDemo.Web.Components
-
-<PageTitle>Products - Blazor CRUD Demo</PageTitle>
 
 <div class="container-fluid py-4">
     <!-- Header Section -->
@@ -282,7 +281,7 @@
                                                     <span class="badge bg-light text-dark">@product.CategoryName</span>
                                                 </td>
                                                 <td>
-                                                    <span class="fw-bold text-success">@product.Price.ToString("C")</span>
+                                                    <span class="fw-bold text-success">@CurrencyFormatter.FormatPrice(product.Price)</span>
                                                 </td>
                                                 <td>
                                                     <span class="@GetStockClass(product)">@product.Stock in stock</span>
@@ -353,7 +352,7 @@
                                                 <p class="card-text text-muted small mb-2">@product.CategoryName</p>
                                                 <div class="mt-auto">
                                                     <div class="d-flex justify-content-between align-items-center mb-2">
-                                                        <span class="h5 text-success mb-0">@product.Price.ToString("C")</span>
+                                                        <span class="h5 text-success mb-0">@CurrencyFormatter.FormatPrice(product.Price)</span>
                                                         <span class="badge @GetStatusBadgeClass(product) small">@product.AvailabilityStatus</span>
                                                     </div>
                                                     <div class="d-flex justify-content-between align-items-center">
