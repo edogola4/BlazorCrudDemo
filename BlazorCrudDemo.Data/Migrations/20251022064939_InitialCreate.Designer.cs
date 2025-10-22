@@ -3,6 +3,7 @@ using System;
 using BlazorCrudDemo.Data.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BlazorCrudDemo.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251022064939_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.0");
@@ -115,8 +118,8 @@ namespace BlazorCrudDemo.Data.Migrations
                         {
                             Id = "admin-user-id",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "590cee40-b147-4a4a-a007-b41e14a56b2c",
-                            CreatedDate = new DateTime(2025, 10, 22, 6, 54, 16, 940, DateTimeKind.Utc).AddTicks(2810),
+                            ConcurrencyStamp = "042ba3e8-9ec8-4607-bf46-1fa5117f6376",
+                            CreatedDate = new DateTime(2025, 10, 22, 6, 49, 35, 391, DateTimeKind.Utc).AddTicks(6040),
                             Email = "admin@blazorcrud.com",
                             EmailConfirmed = true,
                             FirstName = "System",
@@ -125,9 +128,9 @@ namespace BlazorCrudDemo.Data.Migrations
                             LockoutEnabled = false,
                             NormalizedEmail = "ADMIN@BLAZORCRUD.COM",
                             NormalizedUserName = "ADMIN@BLAZORCRUD.COM",
-                            PasswordHash = "AQAAAAIAAYagAAAAEE2uK5AbB2/Nc/0g5TVe+sy+cwdSeQZe59MA4h5Ap/73KLYyYZRDWg+m2xS76T/JBA==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEJSXjUbcqHZWTi/snv58FueQEbNRQ8wp1Q12bXAoMzyYjCImOIHOLfdKgjq5lXSE7Q==",
                             PhoneNumberConfirmed = false,
-                            SecurityStamp = "109a2371-750a-4eed-80b3-8e86a6604767",
+                            SecurityStamp = "91be0b3c-173d-444e-a88d-194d7b2016ec",
                             TwoFactorEnabled = false,
                             UserName = "admin@blazorcrud.com"
                         });
@@ -355,34 +358,34 @@ namespace BlazorCrudDemo.Data.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedDate = new DateTime(2025, 10, 22, 6, 54, 16, 939, DateTimeKind.Utc).AddTicks(8690),
+                            CreatedDate = new DateTime(2025, 10, 22, 6, 49, 35, 391, DateTimeKind.Utc).AddTicks(4730),
                             Description = "Electronic devices and accessories",
                             DisplayOrder = 1,
                             Icon = "fas fa-laptop",
                             IsActive = true,
-                            ModifiedDate = new DateTime(2025, 10, 22, 6, 54, 16, 939, DateTimeKind.Utc).AddTicks(8690),
+                            ModifiedDate = new DateTime(2025, 10, 22, 6, 49, 35, 391, DateTimeKind.Utc).AddTicks(4740),
                             Name = "Electronics"
                         },
                         new
                         {
                             Id = 2,
-                            CreatedDate = new DateTime(2025, 10, 22, 6, 54, 16, 939, DateTimeKind.Utc).AddTicks(8720),
+                            CreatedDate = new DateTime(2025, 10, 22, 6, 49, 35, 391, DateTimeKind.Utc).AddTicks(4740),
                             Description = "Books and educational materials",
                             DisplayOrder = 2,
                             Icon = "fas fa-book",
                             IsActive = true,
-                            ModifiedDate = new DateTime(2025, 10, 22, 6, 54, 16, 939, DateTimeKind.Utc).AddTicks(8720),
+                            ModifiedDate = new DateTime(2025, 10, 22, 6, 49, 35, 391, DateTimeKind.Utc).AddTicks(4740),
                             Name = "Books"
                         },
                         new
                         {
                             Id = 3,
-                            CreatedDate = new DateTime(2025, 10, 22, 6, 54, 16, 939, DateTimeKind.Utc).AddTicks(8730),
+                            CreatedDate = new DateTime(2025, 10, 22, 6, 49, 35, 391, DateTimeKind.Utc).AddTicks(4750),
                             Description = "Fashion and apparel items",
                             DisplayOrder = 3,
                             Icon = "fas fa-tshirt",
                             IsActive = true,
-                            ModifiedDate = new DateTime(2025, 10, 22, 6, 54, 16, 939, DateTimeKind.Utc).AddTicks(8730),
+                            ModifiedDate = new DateTime(2025, 10, 22, 6, 49, 35, 391, DateTimeKind.Utc).AddTicks(4750),
                             Name = "Clothing"
                         });
                 });
@@ -490,11 +493,11 @@ namespace BlazorCrudDemo.Data.Migrations
                         {
                             Id = 1,
                             CategoryId = 1,
-                            CreatedDate = new DateTime(2025, 10, 22, 6, 54, 16, 940, DateTimeKind.Utc).AddTicks(680),
+                            CreatedDate = new DateTime(2025, 10, 22, 6, 49, 35, 391, DateTimeKind.Utc).AddTicks(5500),
                             Description = "High-performance laptop for professionals",
                             ImageUrl = "https://example.com/macbook-pro.jpg",
                             IsActive = true,
-                            ModifiedDate = new DateTime(2025, 10, 22, 6, 54, 16, 940, DateTimeKind.Utc).AddTicks(690),
+                            ModifiedDate = new DateTime(2025, 10, 22, 6, 49, 35, 391, DateTimeKind.Utc).AddTicks(5500),
                             Name = "MacBook Pro 16-inch",
                             OriginalPrice = 0m,
                             Price = 2399.99m,
@@ -507,11 +510,11 @@ namespace BlazorCrudDemo.Data.Migrations
                         {
                             Id = 2,
                             CategoryId = 1,
-                            CreatedDate = new DateTime(2025, 10, 22, 6, 54, 16, 940, DateTimeKind.Utc).AddTicks(700),
+                            CreatedDate = new DateTime(2025, 10, 22, 6, 49, 35, 391, DateTimeKind.Utc).AddTicks(5510),
                             Description = "Latest smartphone with advanced camera system",
                             ImageUrl = "https://example.com/iphone-15-pro.jpg",
                             IsActive = true,
-                            ModifiedDate = new DateTime(2025, 10, 22, 6, 54, 16, 940, DateTimeKind.Utc).AddTicks(700),
+                            ModifiedDate = new DateTime(2025, 10, 22, 6, 49, 35, 391, DateTimeKind.Utc).AddTicks(5510),
                             Name = "iPhone 15 Pro",
                             OriginalPrice = 0m,
                             Price = 999.99m,
@@ -524,11 +527,11 @@ namespace BlazorCrudDemo.Data.Migrations
                         {
                             Id = 3,
                             CategoryId = 2,
-                            CreatedDate = new DateTime(2025, 10, 22, 6, 54, 16, 940, DateTimeKind.Utc).AddTicks(710),
+                            CreatedDate = new DateTime(2025, 10, 22, 6, 49, 35, 391, DateTimeKind.Utc).AddTicks(5510),
                             Description = "A Handbook of Agile Software Craftsmanship",
                             ImageUrl = "https://example.com/clean-code.jpg",
                             IsActive = true,
-                            ModifiedDate = new DateTime(2025, 10, 22, 6, 54, 16, 940, DateTimeKind.Utc).AddTicks(710),
+                            ModifiedDate = new DateTime(2025, 10, 22, 6, 49, 35, 391, DateTimeKind.Utc).AddTicks(5510),
                             Name = "Clean Code",
                             OriginalPrice = 0m,
                             Price = 39.99m,
@@ -541,11 +544,11 @@ namespace BlazorCrudDemo.Data.Migrations
                         {
                             Id = 4,
                             CategoryId = 2,
-                            CreatedDate = new DateTime(2025, 10, 22, 6, 54, 16, 940, DateTimeKind.Utc).AddTicks(710),
+                            CreatedDate = new DateTime(2025, 10, 22, 6, 49, 35, 391, DateTimeKind.Utc).AddTicks(5520),
                             Description = "Elements of Reusable Object-Oriented Software",
                             ImageUrl = "https://example.com/design-patterns.jpg",
                             IsActive = true,
-                            ModifiedDate = new DateTime(2025, 10, 22, 6, 54, 16, 940, DateTimeKind.Utc).AddTicks(710),
+                            ModifiedDate = new DateTime(2025, 10, 22, 6, 49, 35, 391, DateTimeKind.Utc).AddTicks(5520),
                             Name = "Design Patterns",
                             OriginalPrice = 0m,
                             Price = 49.99m,
@@ -558,11 +561,11 @@ namespace BlazorCrudDemo.Data.Migrations
                         {
                             Id = 5,
                             CategoryId = 3,
-                            CreatedDate = new DateTime(2025, 10, 22, 6, 54, 16, 940, DateTimeKind.Utc).AddTicks(720),
+                            CreatedDate = new DateTime(2025, 10, 22, 6, 49, 35, 391, DateTimeKind.Utc).AddTicks(5530),
                             Description = "Comfortable 100% cotton t-shirt",
                             ImageUrl = "https://example.com/cotton-tshirt.jpg",
                             IsActive = true,
-                            ModifiedDate = new DateTime(2025, 10, 22, 6, 54, 16, 940, DateTimeKind.Utc).AddTicks(720),
+                            ModifiedDate = new DateTime(2025, 10, 22, 6, 49, 35, 391, DateTimeKind.Utc).AddTicks(5530),
                             Name = "Cotton T-Shirt",
                             OriginalPrice = 0m,
                             Price = 19.99m,
