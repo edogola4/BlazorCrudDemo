@@ -1,17 +1,25 @@
 # Blazor CRUD Demo
 
-A comprehensive Blazor Server application demonstrating enterprise-level CRUD operations with authentication, authorization, audit logging, and real-time features. This project showcases modern web development best practices using .NET 8 and Blazor Server.
+A comprehensive Blazor Server application demonstrating enterprise-level CRUD operations with JWT authentication, role-based authorization, audit logging, and real-time features. This project showcases modern web development best practices using .NET 8 and Blazor Server.
 
-![Blazor CRUD Demo](https://img.shields.io/badge/Blazor-5C2D91?logo=blazor&logoColor=white) ![.NET](https://img.shields.io/badge/.NET_8-5C2D91?logo=.net&logoColor=white) ![C#](https://img.shields.io/badge/C%23-239120?logo=c-sharp&logoColor=white) ![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white) ![Authentication](https://img.shields.io/badge/Auth-FF6B6B?logo=key&logoColor=white)
+![Blazor CRUD Demo](https://img.shields.io/badge/Blazor-5C2D91?logo=blazor&logoColor=white) 
+![.NET](https://img.shields.io/badge/.NET_8-5C2D91?logo=.net&logoColor=white) 
+![C#](https://img.shields.io/badge/C%23-239120?logo=c-sharp&logoColor=white) 
+![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white) 
+![JWT](https://img.shields.io/badge/JWT-black?logo=json-web-tokens) 
+![SignalR](https://img.shields.io/badge/SignalR-%235C2D91?logo=microsoft%20azure&logoColor=white)
 
 ## Features
 
 ### 🔐 Authentication & Authorization
+- **JWT Authentication**: Secure token-based authentication
 - **User Registration & Login**: Complete authentication system with email/password
 - **Password Recovery**: Forgot password functionality with email reset
 - **User Management**: Admin panel for user administration
-- **Role-Based Access**: User roles and permissions system
+- **Role-Based Access Control (RBAC)**: Fine-grained permissions system
 - **Profile Management**: User profile editing and settings
+- **Token Refresh**: Secure token refresh mechanism
+- **Claims-based Authorization**: Fine-grained access control
 
 ### 📊 Dashboard
 - **Real-time Statistics**: Live metrics and data visualization
@@ -64,35 +72,33 @@ A comprehensive Blazor Server application demonstrating enterprise-level CRUD op
 - **Responsive Design**: Bootstrap 5 with mobile-first approach
 - **Component Library**: Reusable UI components and controls
 
-## Prerequisites
-
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- [Visual Studio 2022](https://visualstudio.microsoft.com/vs/), [VS Code](https://code.visualstudio.com/), or any .NET IDE
-- No external database required (uses SQLite with automatic setup)
-
 ## Getting Started
 
-### 1. Clone the repository
+### Prerequisites
+
+- .NET 8.0 SDK or later
+- Visual Studio 2022 / VS Code / JetBrains Rider
+- SQLite (included) or SQL Server
+- Node.js (for frontend dependencies)
+
+### Installation
+
+1. **Clone the repository**
 ```bash
-git clone https://github.com/edogola4/BlazorCrudDemo.git
+git clone https://github.com/yourusername/BlazorCrudDemo.git
 cd BlazorCrudDemo
 ```
 
-### 2. Restore dependencies and build
+2. **Database Setup**
+   - SQLite is used by default (no additional setup required)
+   - For SQL Server, update the connection string in `appsettings.json`
+   - Run database migrations (see [Database Setup](DATABASE_SETUP.md))
+
+3. **Run the application**
 ```bash
-# Restore all projects
-dotnet restore
-
-# Build the solution
-dotnet build
-```
-
-### 3. Database Setup
-The application uses SQLite with automatic database creation and migrations:
-
-```bash
+# Start the application
 cd BlazorCrudDemo.Web
-dotnet watch
+dotnet run
 ```
 
 The database file (`blazorcrud.db`) will be created automatically with seed data.
