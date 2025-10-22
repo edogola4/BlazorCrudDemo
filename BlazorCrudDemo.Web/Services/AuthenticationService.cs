@@ -44,7 +44,8 @@ namespace BlazorCrudDemo.Web.Services
                 var user = await _userManager.FindByEmailAsync(loginDto.Email);
                 if (user == null)
                 {
-                    await _auditService.LogLoginAsync("unknown", GetClientIpAddress(), GetUserAgent(), false, "User not found");
+                    // Don't log to LoginHistory for non-existent users to avoid FK constraint violations
+                    _logger.LogWarning("Login attempt for non-existent user: {Email}", loginDto.Email);
                     return new AuthResult
                     {
                         Success = false,
@@ -55,7 +56,11 @@ namespace BlazorCrudDemo.Web.Services
 
                 if (!user.IsActive)
                 {
-                    await _auditService.LogLoginAsync(user.Id, GetClientIpAddress(), GetUserAgent(), false, "Account is inactive");
+                    // Only log if the user exists and is inactive
+                    if (await _userManager.FindByIdAsync(user.Id) != null)
+                    {
+                        await _auditService.LogLoginAsync(user.Id, GetClientIpAddress(), GetUserAgent(), false, "Account is inactive");
+                    }
                     return new AuthResult
                     {
                         Success = false,
@@ -64,14 +69,32 @@ namespace BlazorCrudDemo.Web.Services
                     };
                 }
 
-                var result = await _signInManager.PasswordSignInAsync(
+                // First check the password
+                var result = await _signInManager.CheckPasswordSignInAsync(
                     user,
                     loginDto.Password,
-                    loginDto.RememberMe,
                     lockoutOnFailure: true);
 
                 if (result.Succeeded)
                 {
+                    // Generate claims for the user (but don't sign in yet - we'll do this separately)
+                    var claims = new List<Claim>
+                    {
+                        new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+                        new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                        new Claim("name", $"{user.FirstName} {user.LastName}".Trim()),
+                        new Claim("first_name", user.FirstName ?? ""),
+                        new Claim("last_name", user.LastName ?? "")
+                    };
+
+                    // Add role claims
+                    var roles = await _userManager.GetRolesAsync(user);
+                    foreach (var role in roles)
+                    {
+                        claims.Add(new Claim(ClaimTypes.Role, role));
+                    }
+
                     await _auditService.LogLoginAsync(user.Id, GetClientIpAddress(), GetUserAgent(), true);
 
                     var token = await GenerateJwtTokenAsync(user);
@@ -90,7 +113,8 @@ namespace BlazorCrudDemo.Web.Services
                         AccessToken = token,
                         RefreshToken = refreshToken,
                         ExpiresAt = DateTime.UtcNow.AddHours(1),
-                        User = await MapToUserDtoAsync(user)
+                        User = await MapToUserDtoAsync(user),
+                        RequiresSignIn = true // Flag to indicate sign-in needs to be completed separately
                     };
                 }
 
@@ -150,33 +174,43 @@ namespace BlazorCrudDemo.Web.Services
                     CreatedDate = DateTime.UtcNow
                 };
 
-                var result = await _userManager.CreateAsync(user, registerDto.Password);
-                if (!result.Succeeded)
+                // First create the user
+                var createResult = await _userManager.CreateAsync(user, registerDto.Password);
+                if (!createResult.Succeeded)
                 {
                     return new AuthResult
                     {
                         Success = false,
                         Message = "Failed to create user",
-                        Errors = result.Errors.Select(e => e.Description).ToList()
+                        Errors = createResult.Errors.Select(e => e.Description).ToList()
                     };
                 }
 
-                // Assign role
-                var roleResult = await _userManager.AddToRoleAsync(user, registerDto.Role);
-                if (!roleResult.Succeeded)
+                try
                 {
-                    _logger.LogWarning("Failed to assign role {Role} to user {Email}", registerDto.Role, registerDto.Email);
-                }
+                    // Assign role
+                    var roleResult = await _userManager.AddToRoleAsync(user, registerDto.Role);
+                    if (!roleResult.Succeeded)
+                    {
+                        _logger.LogWarning("Failed to assign role {Role} to user {Email}", registerDto.Role, registerDto.Email);
+                    }
 
-                await _auditService.LogUserActivityAsync(
-                    user.Id,
-                    "USER_CREATED",
-                    $"User account created for {registerDto.Email}",
-                    $"Role: {registerDto.Role}",
-                    null,
-                    "User",
-                    GetClientIpAddress(),
-                    GetUserAgent());
+                    // Now that user is created, we can safely log the activity
+                    await _auditService.LogUserActivityAsync(
+                        user.Id,
+                        "USER_CREATED",
+                        $"User account created for {registerDto.Email}",
+                        $"Role: {registerDto.Role}",
+                        null,
+                        "User",
+                        GetClientIpAddress(),
+                        GetUserAgent());
+                }
+                catch (Exception ex)
+                {
+                    // If anything fails after user creation, log the error but don't fail the registration
+                    _logger.LogError(ex, "Error in post-user-creation steps for user {Email}", registerDto.Email);
+                }
 
                 return new AuthResult
                 {
@@ -378,7 +412,11 @@ namespace BlazorCrudDemo.Web.Services
         {
             try
             {
-                var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext?.User);
+                var httpContext = _httpContextAccessor.HttpContext;
+                if (httpContext?.User == null)
+                    return null;
+
+                var user = await _userManager.GetUserAsync(httpContext.User);
                 if (user == null)
                     return null;
 
@@ -395,7 +433,11 @@ namespace BlazorCrudDemo.Web.Services
         {
             try
             {
-                var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext?.User);
+                var httpContext = _httpContextAccessor.HttpContext;
+                if (httpContext?.User == null)
+                    return false;
+
+                var user = await _userManager.GetUserAsync(httpContext.User);
                 return user != null && user.IsActive;
             }
             catch (Exception ex)
