@@ -31,7 +31,7 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
         private IQueryable<ActivityItem> FilteredActivities => recentActivities.AsQueryable()
             .Where(a => string.IsNullOrEmpty(searchQuery) ||
                    a.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                   a.Description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                   a.Description != null && a.Description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
                    a.Type.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
             .Where(a => selectedFilter == "all" || a.Type.Contains(selectedFilter.Replace("s", "").Replace("orders", "order").Replace("categories", "category")));
         
