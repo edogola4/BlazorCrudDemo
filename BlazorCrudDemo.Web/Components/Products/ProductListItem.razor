@@ -1,4 +1,5 @@
 @using System.Globalization
+@using BlazorCrudDemo.Web.Utilities
 
 <div class="product-list-item list-group-item p-0 border-0 mb-3">
     <div class="row g-0">
@@ -86,11 +87,11 @@
                     }
                     
                     <div class="product-price">
-                        <span class="current-price fw-bold">@Product.Price.ToString("C", CultureInfo.CurrentCulture)</span>
+                        <span class="current-price fw-bold">@CurrencyFormatter.FormatPrice(Product.Price)</span>
                         @if (Product.OriginalPrice > Product.Price)
                         {
                             <span class="original-price text-muted text-decoration-line-through ms-2">
-                                @Product.OriginalPrice.ToString("C", CultureInfo.CurrentCulture)
+                                @CurrencyFormatter.FormatPrice(Product.OriginalPrice)
                             </span>
                         }
                     </div>
