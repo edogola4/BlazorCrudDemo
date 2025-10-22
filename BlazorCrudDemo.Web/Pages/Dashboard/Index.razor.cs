@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.JSInterop;
 using System;
 using System.Collections.Generic;
@@ -12,13 +11,13 @@ using BlazorCrudDemo.Shared.DTOs;
 
 namespace BlazorCrudDemo.Web.Pages.Dashboard
 {
-    [Authorize]
+    // [Authorize] - Removed to disable authentication
     public partial class Index : ComponentBase, IDisposable
     {
         [Inject] private ILogger<Index> Logger { get; set; } = default!;
         [Inject] private IJSRuntime JS { get; set; } = default!;
         [Inject] private NavigationManager Navigation { get; set; } = default!;
-        [Inject] private IAuthenticationService AuthenticationService { get; set; } = default!;
+        // [Inject] private IAuthenticationService AuthenticationService { get; set; } = default!;
         [Inject] private IAuditService AuditService { get; set; } = default!;
 
         private bool isLoading = true;
@@ -28,7 +27,7 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
         private string? errorMessage;
         private DashboardStats stats = new();
         private List<ActivityItem> recentActivities = new();
-        private ApplicationUserDto? currentUser;
+        // private ApplicationUserDto? currentUser; - Removed since auth is disabled
 
         private IQueryable<ActivityItem> FilteredActivities => recentActivities.AsQueryable()
             .Where(a => string.IsNullOrEmpty(searchQuery) ||
@@ -49,24 +48,24 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
 
         protected override async Task OnInitializedAsync()
         {
-            currentUser = await AuthenticationService.GetCurrentUserAsync();
+            // currentUser = await AuthenticationService.GetCurrentUserAsync();
 
-            if (currentUser == null)
-            {
-                Navigation.NavigateTo("/auth/login");
-                return;
-            }
+            // if (currentUser == null)
+            // {
+            //     Navigation.NavigateTo("/auth/login");
+            //     return;
+            // }
 
             // Log dashboard access
-            await AuditService.LogUserActivityAsync(
-                currentUser.Id,
-                "DASHBOARD_VIEW",
-                "User accessed dashboard",
-                null,
-                null,
-                "Dashboard",
-                GetClientIpAddress(),
-                GetUserAgent());
+            // await AuditService.LogUserActivityAsync(
+            //     currentUser.Id,
+            //     "DASHBOARD_VIEW",
+            //     "User accessed dashboard",
+            //     null,
+            //     null,
+            //     "Dashboard",
+            //     GetClientIpAddress(),
+            //     GetUserAgent());
 
             cancellationTokenSource = new System.Threading.CancellationTokenSource();
 
@@ -135,7 +134,7 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
                 // stats = await DashboardService.GetStatsAsync();
 
                 // Generate stats based on user role
-                var isAdmin = currentUser?.Roles.Contains("Admin") == true;
+                // var isAdmin = currentUser?.Roles.Contains("Admin") == true;
 
                 stats = new DashboardStats
                 {
@@ -154,10 +153,10 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
                 };
 
                 // Add admin-specific stats
-                if (isAdmin)
-                {
-                    // Add admin dashboard stats here if needed
-                }
+                // if (isAdmin)
+                // {
+                //     // Add admin dashboard stats here if needed
+                // }
 
                 Logger.LogInformation("Dashboard stats loaded successfully");
             }
@@ -183,7 +182,7 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
                 // recentActivities = await ActivityService.GetRecentAsync(limit: 5);
 
                 // Generate activities based on user role
-                var isAdmin = currentUser?.Roles.Contains("Admin") == true;
+                // var isAdmin = currentUser?.Roles.Contains("Admin") == true;
 
                 recentActivities = new List<ActivityItem>
                 {
@@ -223,24 +222,24 @@ namespace BlazorCrudDemo.Web.Pages.Dashboard
                     {
                         Type = "user.login",
                         Title = "User logged in",
-                        Description = $"Welcome back, {currentUser?.FirstName ?? currentUser?.Email?.Split('@')[0] ?? "User"}!",
+                        Description = $"Welcome back, User!", // Removed currentUser reference
                         Timestamp = DateTime.UtcNow.AddHours(-3),
                         Link = "/account/profile"
                     }
                 };
 
                 // Add admin-specific activities
-                if (isAdmin)
-                {
-                    recentActivities.Add(new ActivityItem
-                    {
-                        Type = "system.alert",
-                        Title = "System maintenance scheduled",
-                        Description = "Database maintenance scheduled for tonight at 2:00 AM",
-                        Timestamp = DateTime.UtcNow.AddHours(-1),
-                        Link = "/admin/system"
-                    });
-                }
+                // if (isAdmin)
+                // {
+                //     recentActivities.Add(new ActivityItem
+                //     {
+                //         Type = "system.alert",
+                //         Title = "System maintenance scheduled",
+                //         Description = "Database maintenance scheduled for tonight at 2:00 AM",
+                //         Timestamp = DateTime.UtcNow.AddHours(-1),
+                //         Link = "/admin/system"
+                //     });
+                // }
 
                 Logger.LogInformation("Recent activities loaded: {Count} items", recentActivities.Count);
             }
