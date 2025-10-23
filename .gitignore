@@ -8,6 +8,9 @@ obj/
 *.ncrunchsolution
 *.ncrunchproject
 *.vs/
+
+# Local files
+cookies.txt
 .vs/
 
 # Build results
