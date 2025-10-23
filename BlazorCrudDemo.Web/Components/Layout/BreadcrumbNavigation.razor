@@ -58,6 +58,21 @@
                 new BreadcrumbItem { Title = "Home", Url = "/" },
                 new BreadcrumbItem { Title = "Categories", Url = "/categories", IsActive = true }
             },
+            "/auth/login" => new List<BreadcrumbItem>
+            {
+                new BreadcrumbItem { Title = "Home", Url = "/" },
+                new BreadcrumbItem { Title = "Login", Url = "/auth/login", IsActive = true }
+            },
+            "/auth/register" => new List<BreadcrumbItem>
+            {
+                new BreadcrumbItem { Title = "Home", Url = "/" },
+                new BreadcrumbItem { Title = "Register", Url = "/auth/register", IsActive = true }
+            },
+            "/auth/forgot-password" => new List<BreadcrumbItem>
+            {
+                new BreadcrumbItem { Title = "Home", Url = "/" },
+                new BreadcrumbItem { Title = "Forgot Password", Url = "/auth/forgot-password", IsActive = true }
+            },
             _ => new List<BreadcrumbItem>
             {
                 new BreadcrumbItem { Title = "Home", Url = "/" },
