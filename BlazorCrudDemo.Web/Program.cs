@@ -56,26 +56,39 @@ builder.Services.AddServerSideBlazor();
 builder.Services.AddControllers();
 
 // Configure Identity
-// builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
-// {
-//     options.Password.RequireDigit = true;
-//     options.Password.RequireLowercase = true;
-//     options.Password.RequireUppercase = true;
-//     options.Password.RequireNonAlphanumeric = true;
-//     options.Password.RequiredLength = 8;
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+{
+    options.Password.RequireDigit = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequiredLength = 8;
 
-//     options.User.RequireUniqueEmail = true;
-//     options.SignIn.RequireConfirmedEmail = false; // Set to true in production
+    options.User.RequireUniqueEmail = true;
+    options.SignIn.RequireConfirmedEmail = false; // Set to true in production
 
-//     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(30);
-//     options.Lockout.MaxFailedAccessAttempts = 5;
-//     options.Lockout.AllowedForNewUsers = true;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(30);
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.AllowedForNewUsers = true;
 
-//     options.Tokens.PasswordResetTokenProvider = TokenOptions.DefaultProvider;
-//     options.Tokens.EmailConfirmationTokenProvider = TokenOptions.DefaultProvider;
-// })
-// .AddEntityFrameworkStores<ApplicationDbContext>()
-// .AddDefaultTokenProviders();
+    options.Tokens.PasswordResetTokenProvider = TokenOptions.DefaultProvider;
+    options.Tokens.EmailConfirmationTokenProvider = TokenOptions.DefaultProvider;
+})
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders();
+
+// Configure cookie authentication
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.LogoutPath = "/Account/Logout";
+    options.AccessDeniedPath = "/Account/AccessDenied";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.ExpireTimeSpan = TimeSpan.FromHours(2);
+    options.SlidingExpiration = true;
+});
 // builder.Services.AddIdentityServer(options =>
 // {
 //     options.IssuerUri = "https://localhost:5001";
@@ -91,94 +104,94 @@ builder.Services.AddControllers();
 // .AddProfileService<ProfileService>();
 
 // Configure JWT Authentication
-// var jwtKey = builder.Configuration["Jwt:Key"] ?? "YourSuperSecretKeyThatIsAtLeast32CharactersLong!";
-// var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "https://localhost:5001";
-// var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "https://localhost:5001";
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "YourSuperSecretKeyThatIsAtLeast32CharactersLong!";
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "https://localhost:5120";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "https://localhost:5120";
 
-// builder.Services.AddAuthentication(options =>
-// {
-//     options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-//     options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-// })
-// .AddCookie(options =>
-// {
-//     options.LoginPath = "/Account/Login";
-//     options.LogoutPath = "/Account/Logout";
-//     options.AccessDeniedPath = "/Account/AccessDenied";
-//     options.Cookie.HttpOnly = true;
-//     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-//     options.Cookie.SameSite = SameSiteMode.Lax;
-//     options.ExpireTimeSpan = TimeSpan.FromHours(2);
-//     options.SlidingExpiration = true;
-// })
-// .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
-// {
-//     options.Authority = jwtIssuer;
-//     options.RequireHttpsMetadata = false;
-//     options.TokenValidationParameters = new TokenValidationParameters
-//     {
-//         ValidateIssuer = true,
-//         ValidateAudience = true,
-//         ValidateLifetime = true,
-//         ValidateIssuerSigningKey = true,
-//         ValidIssuer = jwtIssuer,
-//         ValidAudience = jwtAudience,
-//         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-//         NameClaimType = "name",
-//         RoleClaimType = "role",
-//         ClockSkew = TimeSpan.Zero
-//     };
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+})
+.AddCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.LogoutPath = "/Account/Logout";
+    options.AccessDeniedPath = "/Account/AccessDenied";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.ExpireTimeSpan = TimeSpan.FromHours(2);
+    options.SlidingExpiration = true;
+})
+.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+{
+    options.Authority = jwtIssuer;
+    options.RequireHttpsMetadata = false;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+        NameClaimType = "name",
+        RoleClaimType = "role",
+        ClockSkew = TimeSpan.Zero
+    };
 
-//     options.Events = new JwtBearerEvents
-//     {
-//         OnTokenValidated = async context =>
-//         {
-//             var userManager = context.HttpContext.RequestServices.GetService<UserManager<ApplicationUser>>();
-//             var signInManager = context.HttpContext.RequestServices.GetService<SignInManager<ApplicationUser>>();
+    options.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = async context =>
+        {
+            var userManager = context.HttpContext.RequestServices.GetService<UserManager<ApplicationUser>>();
+            var signInManager = context.HttpContext.RequestServices.GetService<SignInManager<ApplicationUser>>();
 
-//             if (userManager == null || signInManager == null) return;
+            if (userManager == null || signInManager == null) return;
 
-//             var userId = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
-//                         context.Principal?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+            var userId = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value ??
+                        context.Principal?.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
 
-//             if (string.IsNullOrEmpty(userId)) return;
+            if (string.IsNullOrEmpty(userId)) return;
 
-//             var user = await userManager.FindByIdAsync(userId);
-//             if (user == null || !user.IsActive) return;
+            var user = await userManager.FindByIdAsync(userId);
+            if (user == null || !user.IsActive) return;
 
-//             user.LastLoginDate = DateTime.UtcNow;
-//             await userManager.UpdateAsync(user);
+            user.LastLoginDate = DateTime.UtcNow;
+            await userManager.UpdateAsync(user);
 
-//             var claims = new List<Claim>
-//             {
-//                 new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-//                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
-//                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-//                 new Claim("name", $"{user.FirstName} {user.LastName}".Trim()),
-//                 new Claim("first_name", user.FirstName ?? ""),
-//                 new Claim("last_name", user.LastName ?? "")
-//             };
+            var claims = new List<Claim>
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+                new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim("name", $"{user.FirstName} {user.LastName}".Trim()),
+                new Claim("first_name", user.FirstName ?? ""),
+                new Claim("last_name", user.LastName ?? "")
+            };
 
-//             var roles = await userManager.GetRolesAsync(user);
-//             foreach (var role in roles)
-//             {
-//                 claims.Add(new Claim(ClaimTypes.Role, role));
-//             }
+            var roles = await userManager.GetRolesAsync(user);
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
 
-//             var appIdentity = new ClaimsIdentity(claims, "Identity.Application");
-//             context.Principal = new ClaimsPrincipal(appIdentity);
-//         },
+            var appIdentity = new ClaimsIdentity(claims, "Identity.Application");
+            context.Principal = new ClaimsPrincipal(appIdentity);
+        },
 
-//         OnAuthenticationFailed = context =>
-//         {
-//             if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
-//             {
-//                 context.Response.Headers.Append("Token-Expired", "true");
-//             }
-//             return Task.CompletedTask;
-//         }
-//     };
-// });
+        OnAuthenticationFailed = context =>
+        {
+            if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+            {
+                context.Response.Headers.Append("Token-Expired", "true");
+            }
+            return Task.CompletedTask;
+        }
+    };
+});
 
 // Configure Identity to use the same JWT claims
 // builder.Services.Configure<IdentityOptions>(options =>
@@ -190,31 +203,31 @@ builder.Services.AddControllers();
 // });
 
 // Configure Authorization Policies
-// builder.Services.AddAuthorization(options =>
-// {
-//     // Admin policy - requires Admin role
-//     options.AddPolicy("AdminOnly", policy =>
-//         policy.RequireRole("Admin"));
+builder.Services.AddAuthorization(options =>
+{
+    // Admin policy - requires Admin role
+    options.AddPolicy("AdminOnly", policy =>
+        policy.RequireRole("Admin"));
 
-//     // User policy - requires User or Admin role
-//     options.AddPolicy("UserOnly", policy =>
-//         policy.RequireRole("User", "Admin"));
+    // User policy - requires User or Admin role
+    options.AddPolicy("UserOnly", policy =>
+        policy.RequireRole("User", "Admin"));
 
-//     // Product management policy
-//     options.AddPolicy("CanManageProducts", policy =>
-//         policy.RequireRole("Admin")
-//               .RequireClaim("permission", "products.manage"));
+    // Product management policy
+    options.AddPolicy("CanManageProducts", policy =>
+        policy.RequireRole("Admin")
+              .RequireClaim("permission", "products.manage"));
 
-//     // Category management policy
-//     options.AddPolicy("CanManageCategories", policy =>
-//         policy.RequireRole("Admin")
-//               .RequireClaim("permission", "categories.manage"));
+    // Category management policy
+    options.AddPolicy("CanManageCategories", policy =>
+        policy.RequireRole("Admin")
+              .RequireClaim("permission", "categories.manage"));
 
-//     // User management policy
-//     options.AddPolicy("CanManageUsers", policy =>
-//         policy.RequireRole("Admin")
-//               .RequireClaim("permission", "users.manage"));
-// });
+    // User management policy
+    options.AddPolicy("CanManageUsers", policy =>
+        policy.RequireRole("Admin")
+              .RequireClaim("permission", "users.manage"));
+});
 
 // Configure CORS
 builder.Services.AddCors(options =>
@@ -364,8 +377,8 @@ app.UseRouting();
 // app.UseIdentityServer();
 
 // Add authentication and authorization middleware
-// app.UseAuthentication();
-// app.UseAuthorization();
+app.UseAuthentication();
+app.UseAuthorization();
 
 // Configure SignalR hub
 app.MapHub<NotificationHub>("/notificationHub");
