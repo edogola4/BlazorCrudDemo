@@ -1,32 +1,84 @@
 @using BlazorCrudDemo.Web.Components.Layout
+@using Microsoft.AspNetCore.Components.Authorization
+@using BlazorCrudDemo.Web.Components
+@inject NavigationManager Navigation
 
-<Router AppAssembly="@typeof(App).Assembly">
-    <Found Context="routeData">
-        @if (IsAuthRoute(routeData.PageType))
-        {
-            <!-- Authentication routes use MainLayout (AuthLayout doesn't exist) -->
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            @if (IsAuthRoute(routeData.PageType))
+            {
+                <!-- Auth routes use AuthLayout -->
+                <LayoutView Layout="@typeof(AuthLayout)">
+                    <AuthorizeRouteView RouteData="@routeData">
+                        <NotAuthorized>
+                            @if (!context.User?.Identity?.IsAuthenticated ?? true)
+                            {
+                                <RedirectToLogin />
+                            }
+                            else
+                            {
+                                <p>You are not authorized to access this page.</p>
+                            }
+                        </NotAuthorized>
+                    </AuthorizeRouteView>
+                </LayoutView>
+            }
+            else
+            {
+                <!-- Non-auth routes use MainLayout -->
+                <LayoutView Layout="@typeof(MainLayout)">
+                    <AuthorizeRouteView RouteData="@routeData">
+                        <Authorizing>
+                            <div class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Loading...</p>
+                            </div>
+                        </Authorizing>
+                        <NotAuthorized>
+                            @if (!context.User?.Identity?.IsAuthenticated ?? true)
+                            {
+                                <RedirectToLogin />
+                            }
+                            else
+                            {
+                                <p>You are not authorized to access this page.</p>
+                            }
+                        </NotAuthorized>
+                    </AuthorizeRouteView>
+                </LayoutView>
+            }
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
             <LayoutView Layout="@typeof(MainLayout)">
-                <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+                <div class="not-found-container">
+                    <h1>Page not found</h1>
+                    <p>Sorry, there's nothing at this address.</p>
+                    <button class="btn btn-primary" @onclick="NavigateHome">Return to Home</button>
+                </div>
             </LayoutView>
-        }
-        else
-        {
-            <!-- Regular app routes use MainLayout -->
-            <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
-        }
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-    <NotFound>
-        <PageTitle>Not found</PageTitle>
-        <LayoutView Layout="@typeof(MainLayout)">
-            <p role="alert">Sorry, there's nothing at this address.</p>
-        </LayoutView>
-    </NotFound>
-</Router>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>
 
 @code {
     private bool IsAuthRoute(Type pageType)
     {
-        return pageType.Namespace?.StartsWith("BlazorCrudDemo.Web.Pages.Auth") == true;
+        // Check if the page is in the Auth namespace or has auth-related routes
+        var pageNamespace = pageType.Namespace ?? "";
+        var pageName = pageType.Name;
+
+        return pageNamespace.Contains("Auth") ||
+               pageName.Contains("Login") ||
+               pageName.Contains("Register") ||
+               pageName.Contains("ForgotPassword");
+    }
+
+    private void NavigateHome()
+    {
+        Navigation.NavigateTo("/");
     }
 }
