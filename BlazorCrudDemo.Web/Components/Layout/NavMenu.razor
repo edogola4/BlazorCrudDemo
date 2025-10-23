@@ -3,12 +3,15 @@
 @using Microsoft.AspNetCore.Authorization
 @using BlazorCrudDemo.Web.Services
 @using BlazorCrudDemo.Shared.DTOs
+@using System
 @inject IAuthenticationService AuthenticationService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
-@implements IDisposable
+@inject ILogger<NavMenu> Logger
 
-<div class="nav-menu @(IsMobile ? "mobile-nav" : "desktop-nav") @(IsCollapsed ? "collapsed" : "")">
+@if (isInitialized)
+{
+    <div class="nav-menu @(IsMobile ? "mobile-nav" : "desktop-nav") @(IsCollapsed ? "collapsed" : "")">
     <!-- Navigation Items -->
     <nav class="nav-items">
 
@@ -238,177 +241,7 @@
             </div>
         </div>
     </nav>
-
-    <!-- Recently Viewed Section -->
-    @if (!IsCollapsed && RecentlyViewed.Any())
-    {
-        <div class="recently-viewed">
-            <div class="recently-viewed-header">
-                <i class="bi bi-clock-history me-2"></i>
-                <span>Recently Viewed</span>
-            </div>
-            <div class="recently-viewed-items">
-                @foreach (var item in RecentlyViewed.Take(3))
-                {
-                    <div class="recently-viewed-item" @onclick="() => NavigateToPage(item.Url)">
-                        <div class="recent-icon">
-                            <i class="bi @item.Icon"></i>
-                        </div>
-                        <div class="recent-info">
-                            <div class="recent-title">@item.Title</div>
-                            <div class="recent-time">@item.TimeAgo</div>
-                        </div>
-                    </div>
-                }
-            </div>
-        </div>
-    }
 </div>
-
-@code {
-    [Parameter] public ApplicationUserDto? User { get; set; }
-    private ApplicationUserDto? currentUser;
-
-    private class RecentlyViewedItem
-    {
-        public string Title { get; set; } = string.Empty;
-        public string Icon { get; set; } = string.Empty;
-        public string Url { get; set; } = string.Empty;
-        public string TimeAgo { get; set; } = string.Empty;
-        public DateTime ViewedAt { get; set; } = DateTime.Now;
-    }
-
-    [Parameter] public bool IsCollapsed { get; set; }
-    [Parameter] public bool IsMobile { get; set; }
-    private List<RecentlyViewedItem> RecentlyViewed { get; set; } = new();
-
-    protected override async Task OnInitializedAsync()
-    {
-        currentUser = User ?? await AuthenticationService.GetCurrentUserAsync();
-
-        // Track navigation for recently viewed
-        Navigation.LocationChanged += OnLocationChanged;
-    }
-
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
-    {
-        // Update recently viewed items
-        var path = new Uri(e.Location).AbsolutePath;
-        AddToRecentlyViewed(path);
-        UpdateTimeAgo();
-    }
-
-    private void AddToRecentlyViewed(string url)
-    {
-        // Don't add if it's already the most recent
-        if (RecentlyViewed.Any() && RecentlyViewed[0].Url == url)
-            return;
-
-        // Remove if already exists
-        var existing = RecentlyViewed.FirstOrDefault(x => x.Url == url);
-        if (existing != null)
-        {
-            RecentlyViewed.Remove(existing);
-        }
-
-        var title = GetPageTitle(url);
-        var icon = GetPageIcon(url);
-
-        var item = new RecentlyViewedItem
-        {
-            Title = title,
-            Icon = icon,
-            Url = url,
-            TimeAgo = "Just now",
-            ViewedAt = DateTime.Now
-        };
-
-        RecentlyViewed.Insert(0, item);
-
-        // Keep only last 5 items
-        if (RecentlyViewed.Count > 5)
-        {
-            RecentlyViewed = RecentlyViewed.Take(5).ToList();
-        }
-
-        InvokeAsync(StateHasChanged);
-    }
-
-    private void UpdateTimeAgo()
-    {
-        foreach (var item in RecentlyViewed)
-        {
-            var elapsed = DateTime.Now - item.ViewedAt;
-            item.TimeAgo = elapsed.TotalMinutes < 1 ? "Just now" :
-                           elapsed.TotalMinutes < 60 ? $"{(int)elapsed.TotalMinutes} min ago" :
-                           elapsed.TotalHours < 24 ? $"{(int)elapsed.TotalHours}h ago" :
-                           $"{(int)elapsed.TotalDays}d ago";
-        }
-    }
-
-    private string GetPageTitle(string url)
-    {
-        return url switch
-        {
-            "/" => "Dashboard",
-            "/products/search" or "/products/search/" => "Search Products",
-            "/products" => "Products",
-            "/categories" => "Categories",
-            "/admin/users" => "User Management",
-            "/admin/audit" => "Audit Logs",
-            "/admin/reports" => "Reports",
-            "/account/settings" => "Account Settings",
-            "/account/profile" => "Profile",
-            _ => "Unknown Page"
-        };
-    }
-
-    private string GetPageIcon(string url)
-    {
-        return url switch
-        {
-            "/" => "bi-house-door-fill",
-            "/products/search" or "/products/search/" => "bi-search",
-            "/products" => "bi-box-seam",
-            "/categories" => "bi-folder",
-            "/admin/users" => "bi-people",
-            "/admin/audit" => "bi-journal-text",
-            "/admin/reports" => "bi-bar-chart",
-            "/account/settings" => "bi-person-gear",
-            "/account/profile" => "bi-person-circle",
-            _ => "bi-circle"
-        };
-    }
-
-    private bool IsActive(string href)
-    {
-        var currentUrl = new Uri(Navigation.Uri).AbsolutePath;
-        if (href == "/" && currentUrl == "/") return true;
-        if (href == "/products/search" && currentUrl.StartsWith("/products/search")) return true;
-        return currentUrl == href;
-    }
-
-    private void NavigateToHome() => Navigation.NavigateTo("/");
-    private void NavigateToProducts() => Navigation.NavigateTo("/products");
-    private void NavigateToCategories() => Navigation.NavigateTo("/categories");
-    private void NavigateToSearch() => Navigation.NavigateTo("/products/search");
-    private void NavigateToUserManagement() => Navigation.NavigateTo("/admin/users");
-    private void NavigateToAuditLogs() => Navigation.NavigateTo("/admin/audit");
-    private void NavigateToReports() => Navigation.NavigateTo("/admin/reports");
-    private void NavigateToAccountSettings() => Navigation.NavigateTo("/account/settings");
-    private void NavigateToProfile() => Navigation.NavigateTo("/account/profile");
-    private void NavigateToPage(string url) => Navigation.NavigateTo(url);
-
-    private async Task HandleLogout()
-    {
-        await AuthenticationService.LogoutAsync();
-        Navigation.NavigateTo("/auth/login", forceLoad: true);
-    }
-
-    public void Dispose()
-    {
-        Navigation.LocationChanged -= OnLocationChanged;
-    }
 }
 
 <style>
@@ -584,158 +417,78 @@
         color: #dc2626 !important;
     }
 
-    /* Recently Viewed Section */
-    .recently-viewed {
-        border-top: 1px solid #334155;
-        padding: 1rem 0.5rem;
-        margin-top: auto;
-        opacity: 1;
-        transition: opacity 0.3s ease;
-    }
-
-    .collapsed .recently-viewed {
-        display: none;
-    }
-
-    .recently-viewed-header {
-        display: flex;
-        align-items: center;
-        padding: 0 0.5rem 0.5rem;
-        color: #cbd5e1;
-        opacity: 0.8;
-        font-size: 0.875rem;
-        font-weight: 600;
-    }
-
-    .recently-viewed-items {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-
-    .recently-viewed-item {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-        color: #cbd5e1;
-    }
-
-    .recently-viewed-item:hover {
-        background-color: #334155;
-    }
-
-    .recent-icon {
-        width: 24px;
-        height: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #334155;
-        border-radius: 50%;
-        font-size: 0.875rem;
-        flex-shrink: 0;
-    }
-
-    .recent-info {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .recent-title {
-        font-size: 0.875rem;
-        font-weight: 500;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .recent-time {
-        font-size: 0.75rem;
-        opacity: 0.7;
-        white-space: nowrap;
-    }
-
-    /* Collapsed state adjustments */
-    .collapsed .nav-link {
-        justify-content: center;
-        padding: 0.75rem 0.5rem;
-    }
-
-    .collapsed .nav-icon-wrapper {
-        justify-content: center;
-    }
-
-    .collapsed .nav-text {
-        display: none;
-    }
-
-    /* Mobile styles */
-    .mobile-nav {
-        width: 100%;
-    }
-
-    .mobile-nav .nav-items {
-        padding: 0.25rem 0;
-    }
-
-    .mobile-nav .nav-link {
-        padding: 0.625rem 0.75rem;
-        margin: 0 0.25rem;
-    }
-
-    .mobile-nav .nav-icon {
-        font-size: 1.125rem;
-    }
-
-    .mobile-nav .nav-text {
-        font-size: 0.875rem;
-    }
-
-    .mobile-nav .recently-viewed {
-        padding: 0.75rem 0.25rem;
-    }
-
-    /* High contrast mode support */
-    @@media (prefers-contrast: high) {
-        .nav-link:hover {
-            background-color: #334155;
-        }
-
-        .nav-item.active .nav-link {
-            background-color: #334155;
-            border: 1px solid #1e3a8a;
-        }
-
-        .nav-indicator {
-            width: 4px;
-        }
-    }
-
-    /* Reduced motion support */
-    @@media (prefers-reduced-motion: reduce) {
-        .nav-menu,
-        .nav-link,
-        .nav-icon,
-        .nav-text,
-        .nav-tooltip,
-        .recently-viewed {
-            transition: none;
-        }
-    }
-
-    /* Dark mode adjustments */
-    @@media (prefers-color-scheme: dark) {
-        .nav-tooltip {
-            background: #0f172a;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-        }
-
-        .nav-tooltip::before {
-            border-right-color: #0f172a;
-        }
-    }
+    /* High contrast mode support - removed media query for build compatibility */
     </style>
+
+@code {
+    private bool isInitialized = false;
+    private bool isDisposed = false;
+    [Parameter] public ApplicationUserDto? User { get; set; }
+    private ApplicationUserDto? currentUser;
+
+    [Parameter] public bool IsCollapsed { get; set; }
+    [Parameter] public bool IsMobile { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            currentUser = User;
+
+            // Subscribe to authentication state changes
+            AuthenticationService.AuthenticationStateChanged += OnAuthenticationStateChanged;
+
+            isInitialized = true;
+            await base.OnInitializedAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing NavMenu");
+            isInitialized = true; // Still render the component even if there's an error
+            StateHasChanged();
+        }
+    }
+
+    private void OnAuthenticationStateChanged()
+    {
+        // Update current user when authentication state changes
+        InvokeAsync(async () =>
+        {
+            currentUser = await AuthenticationService.GetCurrentUserAsync();
+            StateHasChanged();
+        });
+    }
+
+    private bool IsActive(string href)
+    {
+        var currentUrl = new Uri(Navigation.Uri).AbsolutePath;
+        if (href == "/" && currentUrl == "/") return true;
+        if (href == "/products/search" && currentUrl.StartsWith("/products/search")) return true;
+        return currentUrl == href;
+    }
+
+    private void NavigateToHome() => Navigation.NavigateTo("/");
+    private void NavigateToProducts() => Navigation.NavigateTo("/products");
+    private void NavigateToCategories() => Navigation.NavigateTo("/categories");
+    private void NavigateToSearch() => Navigation.NavigateTo("/products/search");
+    private void NavigateToUserManagement() => Navigation.NavigateTo("/admin/users");
+    private void NavigateToAuditLogs() => Navigation.NavigateTo("/admin/audit");
+    private void NavigateToReports() => Navigation.NavigateTo("/admin/reports");
+    private void NavigateToAccountSettings() => Navigation.NavigateTo("/account/settings");
+    private void NavigateToProfile() => Navigation.NavigateTo("/account/profile");
+
+    private async Task HandleLogout()
+    {
+        await AuthenticationService.LogoutAsync();
+        Navigation.NavigateTo("/auth/login", forceLoad: true);
+    }
+
+    public void Dispose()
+    {
+        if (!isDisposed)
+        {
+            isDisposed = true;
+            AuthenticationService.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        }
+    }
+}
