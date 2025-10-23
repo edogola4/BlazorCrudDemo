@@ -1,0 +1,21 @@
+@using Microsoft.AspNetCore.Components.Web
+@using BlazorCrudDemo.Web.Services
+@inject NavigationManager Navigation
+@inject IAuthenticationService AuthService
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var returnUrl = Navigation.ToBaseRelativePath(Navigation.Uri);
+        if (string.IsNullOrEmpty(returnUrl) || returnUrl == "/")
+        {
+            Navigation.NavigateTo("/auth/login", true);
+        }
+        else
+        {
+            Navigation.NavigateTo($"/auth/login?returnUrl={Uri.EscapeDataString(returnUrl)}", true);
+        }
+        
+        await base.OnInitializedAsync();
+    }
+}
