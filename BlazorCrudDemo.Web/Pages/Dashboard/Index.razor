@@ -32,7 +32,14 @@
                         <i class="fas fa-exclamation-triangle"></i>
                     </div>
                     <h3>Unable to Load Dashboard</h3>
-                    <p>We encountered an issue while fetching your data. Please try again.</p>
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <p>@errorMessage</p>
+                    }
+                    else
+                    {
+                        <p>We encountered an issue while fetching your data. Please try again.</p>
+                    }
                     <div class="error-actions">
                         <button class="btn btn-primary" @onclick="RefreshDashboard" aria-label="Retry loading dashboard">
                             <i class="fas fa-redo" aria-hidden="true"></i>
@@ -46,34 +53,37 @@
                 </div>
             </div>
         }
-<div class="dashboard-controls">
-                    <div class="search-bar">
-                        <i class="fas fa-search" aria-hidden="true"></i>
-                        <input type="text" placeholder="Search dashboard..." @bind="searchQuery" @bind:event="oninput" />
-                        @if (!string.IsNullOrEmpty(searchQuery))
-                        {
-                            <button class="clear-search-btn" @onclick="ClearSearch" aria-label="Clear search">
-                                <i class="fas fa-times" aria-hidden="true"></i>
-                            </button>
-                        }
-                    </div>
-                    <div class="filters">
-                        <select @bind="selectedFilter" @bind:event="onchange">
-                            <option value="all">All Activities</option>
-                            <option value="orders">Orders</option>
-                            <option value="products">Products</option>
-                            <option value="categories">Categories</option>
-                            <option value="inventory">Inventory</option>
-                        </select>
-                        <button class="btn btn-primary" @onclick="RefreshDashboard">
-                            <i class="fas fa-sync" aria-hidden="true"></i>
-                            Refresh
+        else
+        {
+            <!-- Dashboard Controls -->
+            <div class="dashboard-controls">
+                <div class="search-bar">
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                    <input type="text" placeholder="Search dashboard..." @bind="searchQuery" @bind:event="oninput" />
+                    @if (!string.IsNullOrEmpty(searchQuery))
+                    {
+                        <button class="clear-search-btn" @onclick="ClearSearch" aria-label="Clear search">
+                            <i class="fas fa-times" aria-hidden="true"></i>
                         </button>
-                    </div>
+                    }
                 </div>
+                <div class="filters">
+                    <select @bind="selectedFilter" @bind:event="onchange">
+                        <option value="all">All Activities</option>
+                        <option value="orders">Orders</option>
+                        <option value="products">Products</option>
+                        <option value="categories">Categories</option>
+                        <option value="inventory">Inventory</option>
+                    </select>
+                    <button class="btn btn-primary" @onclick="RefreshDashboard">
+                        <i class="fas fa-sync" aria-hidden="true"></i>
+                        Refresh
+                    </button>
+                </div>
+            </div>
 
-                <!-- Main Dashboard Layout -->
-                <div class="dashboard-layout">
+            <!-- Main Dashboard Layout -->
+            <div class="dashboard-layout">
                 <!-- Stats Overview -->
                 <section class="stats-section" aria-labelledby="stats-heading">
                     <h2 id="stats-heading" class="section-title">Key Metrics</h2>
@@ -269,21 +279,32 @@
                             </div>
                             <div class="card-body">
                                 <div class="activity-feed">
-                                    @foreach (var activity in FilteredActivities.Take(6))
+                                    @if (FilteredActivities != null)
+                                    {
+                                        @foreach (var activity in FilteredActivities.Take(6))
+                                        {
+                                            <div class="activity-item">
+                                                <div class="activity-avatar">
+                                                    <i class="fas fa-@(GetActivityIcon(activity.Type))" aria-hidden="true"></i>
+                                                </div>
+                                                <div class="activity-content">
+                                                    <div class="activity-title">@activity.Title</div>
+                                                    <div class="activity-description">@activity.Description</div>
+                                                    <div class="activity-time">@GetRelativeTime(activity.Timestamp)</div>
+                                                </div>
+                                                <div class="activity-badge">
+                                                    <span class="badge badge-@(GetActivityBadgeType(activity.Type))">
+                                                        @GetActivityBadgeText(activity.Type)
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                    else
                                     {
                                         <div class="activity-item">
-                                            <div class="activity-avatar">
-                                                <i class="fas fa-@(GetActivityIcon(activity.Type))" aria-hidden="true"></i>
-                                            </div>
                                             <div class="activity-content">
-                                                <div class="activity-title">@activity.Title</div>
-                                                <div class="activity-description">@activity.Description</div>
-                                                <div class="activity-time">@GetRelativeTime(activity.Timestamp)</div>
-                                            </div>
-                                            <div class="activity-badge">
-                                                <span class="badge badge-@(GetActivityBadgeType(activity.Type))">
-                                                    @GetActivityBadgeText(activity.Type)
-                                                </span>
+                                                <div class="activity-title">Loading activities...</div>
                                             </div>
                                         </div>
                                     }
