@@ -3,131 +3,139 @@
 @using Microsoft.JSInterop
 @using BlazorCrudDemo.Web.Services
 @using BlazorCrudDemo.Shared.DTOs
+@using Microsoft.AspNetCore.Authorization
+@using System
 @inject IJSRuntime JSRuntime
 @inject NavigationManager Navigation
 @inject IAuthenticationService AuthenticationService
+@inject ILogger<MainLayout> Logger
 
-<div class="layout-container @(IsDarkMode ? "dark-theme" : "light-theme") @(IsMobile ? "mobile-layout" : "desktop-layout")">
-    <!-- Sidebar -->
-    <aside class="sidebar @(IsSidebarCollapsed ? "collapsed" : "expanded")" id="main-sidebar">
-        <!-- Sidebar Header -->
-        <div class="sidebar-header">
-            <div class="sidebar-logo">
-                @if (!IsSidebarCollapsed)
-                {
-                    <div class="sidebar-brand">
-                        <div class="brand-icon">
-                            <i class="bi bi-grid-3x3-gap"></i>
-                        </div>
-                        <h3 class="sidebar-title">Blazor CRUD Demo</h3>
-                    </div>
-                }
-                else
-                {
-                    <div class="sidebar-icon-large">
-                        <i class="bi bi-grid-3x3-gap"></i>
-                    </div>
-                }
-            </div>
-            <button class="sidebar-toggle-btn" @onclick="ToggleSidebar" title="@(IsSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar")">
-                <i class="bi @(IsSidebarCollapsed ? "bi-chevron-right" : "bi-chevron-left")"></i>
-            </button>
-        </div>
-
-        <!-- Navigation Menu -->
-        <div class="sidebar-nav">
-            <NavMenu User="currentUser" />
-        </div>
-
-        <!-- User Profile Section -->
-        <div class="sidebar-footer">
-            <div class="user-profile">
-                <div class="user-avatar">
-                    @if (!string.IsNullOrEmpty(currentUser?.ProfileImageUrl))
+@if (isInitialized)
+{
+    <div class="layout-container @(IsDarkMode ? "dark-theme" : "light-theme") @(IsMobile ? "mobile-layout" : "desktop-layout")">
+        <!-- Sidebar -->
+        <aside class="sidebar @(IsSidebarCollapsed ? "collapsed" : "expanded")" id="main-sidebar">
+            <!-- Sidebar Header -->
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    @if (!IsSidebarCollapsed)
                     {
-                        <img src="@currentUser.ProfileImageUrl" alt="Profile" class="profile-image" />
+                        <div class="sidebar-brand">
+                            <div class="brand-icon">
+                                <i class="bi bi-grid-3x3-gap"></i>
+                            </div>
+                            <h3 class="sidebar-title">Blazor CRUD Demo</h3>
+                        </div>
                     }
                     else
                     {
-                        <i class="bi bi-person-circle"></i>
+                        <div class="sidebar-brand-collapsed">
+                            <i class="bi bi-grid-3x3-gap"></i>
+                        </div>
                     }
-                </div>
-                @if (!IsSidebarCollapsed)
-                {
-                    <div class="user-info">
-                        <div class="user-name">
-                            @(string.IsNullOrEmpty(currentUser?.FirstName + currentUser?.LastName)
-                                ? currentUser?.Email?.Split('@')[0] ?? "User"
-                                : $"{currentUser?.FirstName} {currentUser?.LastName}")
-                        </div>
-                        <div class="user-role">
-                            @(currentUser?.Roles?.FirstOrDefault() ?? "User")
-                        </div>
+                    <div class="sidebar-icon-large">
+                        <i class="bi bi-grid-3x3-gap"></i>
                     </div>
-                }
-                <div class="dropdown" style="position: relative;">
-                    <button class="btn btn-link dropdown-toggle" type="button" @onclick="ToggleUserMenu" @onclick:stopPropagation>
-                        <i class="bi bi-three-dots-vertical"></i>
-                    </button>
-                    @if (showUserMenu)
+                </div>
+                <button class="sidebar-toggle-btn" @onclick="ToggleSidebar" title="@(IsSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar")">
+                    <i class="bi @(IsSidebarCollapsed ? "bi-chevron-right" : "bi-chevron-left")"></i>
+                </button>
+            </div>
+
+            <!-- Navigation Menu -->
+            <div class="sidebar-nav">
+                <NavMenu User="currentUser" />
+            </div>
+
+            <!-- User Profile Section -->
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar">
+                        @if (!string.IsNullOrEmpty(currentUser?.ProfileImageUrl))
+                        {
+                            <img src="@currentUser.ProfileImageUrl" alt="Profile" class="profile-image" />
+                        }
+                        else
+                        {
+                            <i class="bi bi-person-circle"></i>
+                        }
+                    </div>
+                    @if (!IsSidebarCollapsed)
                     {
-                        <div class="dropdown-menu show">
-                            <a class="dropdown-item" href="/account/settings">
-                                <i class="bi bi-person-gear me-2"></i>Account Settings
-                            </a>
-                            <a class="dropdown-item" href="/admin/users" @onclick:preventDefault="true" @onclick="NavigateToUserManagement">
-                                <i class="bi bi-people me-2"></i>User Management
-                            </a>
-                            <div class="dropdown-divider"></div>
-                            <a class="dropdown-item text-danger" href="#" @onclick:preventDefault="true" @onclick="HandleLogout">
-                                <i class="bi bi-box-arrow-right me-2"></i>Logout
-                            </a>
+                        <div class="user-info">
+                            <div class="user-name">
+                                @(string.IsNullOrEmpty(currentUser?.FirstName + currentUser?.LastName)
+                                    ? currentUser?.Email?.Split('@')[0] ?? "User"
+                                    : currentUser?.FirstName + " " + currentUser?.LastName)
+                            </div>
+                            <div class="user-role">
+                                @(currentUser?.Roles?.FirstOrDefault() ?? "User")
+                            </div>
                         </div>
                     }
+                    <div class="dropdown" style="position: relative;">
+                        <button class="btn btn-link dropdown-toggle" type="button" @onclick="ToggleUserMenu" @onclick:stopPropagation>
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        @if (showUserMenu)
+                        {
+                            <div class="dropdown-menu show">
+                                <a class="dropdown-item" href="/account/settings">
+                                    <i class="bi bi-person-gear me-2"></i>Account Settings
+                                </a>
+                                <a class="dropdown-item" href="/admin/users" @onclick:preventDefault="true" @onclick="NavigateToUserManagement">
+                                    <i class="bi bi-people me-2"></i>User Management
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item text-danger" href="#" @onclick:preventDefault="true" @onclick="HandleLogout">
+                                    <i class="bi bi-box-arrow-right me-2"></i>Logout
+                                </a>
+                            </div>
+                        }
+                    </div>
                 </div>
             </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="main-content @(IsSidebarCollapsed ? "sidebar-collapsed" : "sidebar-expanded")">
+            <!-- Top Bar -->
+            <TopBar IsDarkMode="IsDarkMode"
+                    IsMobile="IsMobile"
+                    NotificationCount="NotificationCount"
+                    IsDarkModeChanged="HandleThemeChanged"
+                    OnSearchCommand="HandleSearchCommand"
+                    OnToggleFullscreen="ToggleFullscreen" />
+
+            <!-- Breadcrumb Navigation -->
+            <div class="breadcrumb-container">
+                <BreadcrumbNavigation />
+            </div>
+
+            <!-- Page Content -->
+            <main class="page-content">
+                @if (ShowSearchPalette)
+                {
+                    <SearchCommandPalette @bind-Visible="ShowSearchPalette" OnCommandSelected="HandleCommandSelected" />
+                }
+                @Body
+            </main>
+
+            <!-- Footer -->
+            <Footer />
         </div>
-    </aside>
 
-    <!-- Main Content Area -->
-    <div class="main-content @(IsSidebarCollapsed ? "sidebar-collapsed" : "sidebar-expanded")">
-        <!-- Top Bar -->
-        <TopBar IsDarkMode="IsDarkMode"
-                IsMobile="IsMobile"
-                NotificationCount="NotificationCount"
-                IsDarkModeChanged="HandleThemeChanged"
-                OnSearchCommand="HandleSearchCommand"
-                OnToggleFullscreen="ToggleFullscreen" />
-
-        <!-- Breadcrumb Navigation -->
-        <div class="breadcrumb-container">
-            <BreadcrumbNavigation />
-        </div>
-
-        <!-- Page Content -->
-        <main class="page-content">
-            @if (ShowSearchPalette)
-            {
-                <SearchCommandPalette @bind-Visible="ShowSearchPalette" OnCommandSelected="HandleCommandSelected" />
-            }
-            @Body
-        </main>
-
-        <!-- Footer -->
-        <Footer />
+        <!-- Mobile Overlay -->
+        @if (IsMobile && ShowMobileMenu)
+        {
+            <div class="mobile-overlay" @onclick="CloseMobileMenu"></div>
+        }
     </div>
-
-    <!-- Mobile Overlay -->
-    @if (IsMobile && ShowMobileMenu)
-    {
-        <div class="mobile-overlay" @onclick="CloseMobileMenu"></div>
-    }
-</div>
-
-<!-- Search Command Palette -->
-<SearchCommandPalette @bind-Visible="ShowSearchPalette" OnCommandSelected="HandleCommandSelected" />
+}
 
 @code {
+    private bool isInitialized = false;
+    private bool isDisposed = false;
     private bool IsDarkMode { get; set; }
     private bool IsMobile { get; set; }
     private bool IsSidebarCollapsed { get; set; }
@@ -138,6 +146,25 @@
     private ApplicationUserDto? currentUser;
 
     protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await InitializeUserState();
+            // Subscribe to authentication state changes
+            AuthenticationService.AuthenticationStateChanged += OnAuthenticationStateChanged;
+            isInitialized = true;
+            await base.OnInitializedAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing MainLayout");
+            // Ensure we still render something even if there's an error
+            isInitialized = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task InitializeUserState()
     {
         // Load current user
         currentUser = await AuthenticationService.GetCurrentUserAsync();
@@ -280,6 +307,43 @@
     {
         ShowMobileMenu = false;
         InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleMobileMenu()
+    {
+        ShowMobileMenu = !ShowMobileMenu;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnAuthenticationStateChanged()
+    {
+        // Update current user when authentication state changes
+        InvokeAsync(async () =>
+        {
+            currentUser = await AuthenticationService.GetCurrentUserAsync();
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        if (!isDisposed)
+        {
+            if (AuthenticationService != null)
+            {
+                AuthenticationService.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+            }
+            isDisposed = true;
+        }
+    }
+
+    private void NavigateTo(string url)
+    {
+        Navigation.NavigateTo(url);
+        if (IsMobile)
+        {
+            ShowMobileMenu = false;
+        }
     }
 
     [JSInvokable]
