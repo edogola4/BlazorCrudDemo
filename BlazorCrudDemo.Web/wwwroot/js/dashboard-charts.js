@@ -10,150 +10,167 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function initializeCharts() {
     // Destroy existing charts to prevent canvas reuse errors
-    Object.values(Chart.instances).forEach(instance => {
-        instance.destroy();
-    });
+    // Chart.js 3.x compatibility - use a safer approach
+    try {
+        if (typeof Chart !== 'undefined' && Chart.instances) {
+            Object.values(Chart.instances).forEach(instance => {
+                if (instance && typeof instance.destroy === 'function') {
+                    instance.destroy();
+                }
+            });
+        }
+    } catch (error) {
+        console.warn('Error destroying existing charts:', error);
+    }
 
     // Sales Activity Chart (Line Chart)
     const salesCtx = document.getElementById('salesChart');
     if (salesCtx) {
-        const salesChart = new Chart(salesCtx, {
-            type: 'line',
-            data: {
-                labels: ['Jan 1', 'Jan 8', 'Jan 15', 'Jan 22', 'Jan 29', 'Feb 5', 'Feb 12', 'Feb 19', 'Feb 26', 'Mar 5', 'Mar 12', 'Mar 19'],
-                datasets: [{
-                    label: 'Orders',
-                    data: [12, 19, 15, 25, 22, 30, 28, 35, 32, 40, 38, 45],
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: '#3b82f6',
-                    pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    pointRadius: 6,
-                    pointHoverRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        backgroundColor: '#1e293b',
-                        titleColor: '#ffffff',
-                        bodyColor: '#ffffff',
+        try {
+            const salesChart = new Chart(salesCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan 1', 'Jan 8', 'Jan 15', 'Jan 22', 'Jan 29', 'Feb 5', 'Feb 12', 'Feb 19', 'Feb 26', 'Mar 5', 'Mar 12', 'Mar 19'],
+                    datasets: [{
+                        label: 'Orders',
+                        data: [12, 19, 15, 25, 22, 30, 28, 35, 32, 40, 38, 45],
                         borderColor: '#3b82f6',
-                        borderWidth: 1,
-                        cornerRadius: 8,
-                        displayColors: false,
-                        callbacks: {
-                            label: function(context) {
-                                return `Orders: ${context.parsed.y}`;
-                            }
-                        }
-                    }
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#3b82f6',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }]
                 },
-                scales: {
-                    x: {
-                        grid: {
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
                             display: false
                         },
-                        ticks: {
-                            color: '#64748b',
-                            font: {
-                                size: 12
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#3b82f6',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `Orders: ${context.parsed.y}`;
+                                }
                             }
                         }
                     },
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: '#e2e8f0',
-                            borderDash: [2, 2]
-                        },
-                        ticks: {
-                            color: '#64748b',
-                            font: {
-                                size: 12
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
                             },
-                            callback: function(value) {
-                                return value;
+                            ticks: {
+                                color: '#64748b',
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#e2e8f0',
+                                borderDash: [2, 2]
+                            },
+                            ticks: {
+                                color: '#64748b',
+                                font: {
+                                    size: 12
+                                },
+                                callback: function(value) {
+                                    return value;
+                                }
                             }
                         }
-                    }
-                },
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
-                },
-                elements: {
-                    point: {
-                        hoverBorderWidth: 3
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    elements: {
+                        point: {
+                            hoverBorderWidth: 3
+                        }
                     }
                 }
-            }
-        });
+            });
+        } catch (error) {
+            console.error('Error creating sales chart:', error);
+        }
     }
 
     // Category Distribution Chart (Doughnut Chart)
     const categoryCtx = document.getElementById('categoryChart');
     if (categoryCtx) {
-        const categoryChart = new Chart(categoryCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Electronics', 'Home & Garden', 'Fashion', 'Sports'],
-                datasets: [{
-                    data: [45, 25, 20, 10],
-                    backgroundColor: [
-                        '#3b82f6',
-                        '#10b981',
-                        '#f59e0b',
-                        '#ef4444'
-                    ],
-                    borderColor: [
-                        '#ffffff',
-                        '#ffffff',
-                        '#ffffff',
-                        '#ffffff'
-                    ],
-                    borderWidth: 3,
-                    hoverBorderWidth: 4,
-                    hoverOffset: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false // We have custom legend
-                    },
-                    tooltip: {
-                        backgroundColor: '#1e293b',
-                        titleColor: '#ffffff',
-                        bodyColor: '#ffffff',
-                        borderColor: '#3b82f6',
-                        borderWidth: 1,
-                        cornerRadius: 8,
-                        displayColors: false,
-                        callbacks: {
-                            label: function(context) {
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = Math.round((context.parsed / total) * 100);
-                                return `${context.label}: ${context.parsed} items (${percentage}%)`;
+        try {
+            const categoryChart = new Chart(categoryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Electronics', 'Home & Garden', 'Fashion', 'Sports'],
+                    datasets: [{
+                        data: [45, 25, 20, 10],
+                        backgroundColor: [
+                            '#3b82f6',
+                            '#10b981',
+                            '#f59e0b',
+                            '#ef4444'
+                        ],
+                        borderColor: [
+                            '#ffffff',
+                            '#ffffff',
+                            '#ffffff',
+                            '#ffffff'
+                        ],
+                        borderWidth: 3,
+                        hoverBorderWidth: 4,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false // We have custom legend
+                        },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#3b82f6',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((context.parsed / total) * 100);
+                                    return `${context.label}: ${context.parsed} items (${percentage}%)`;
+                                }
                             }
                         }
-                    }
-                },
-                cutout: '60%',
-                radius: '80%'
-            }
-        });
+                    },
+                    cutout: '60%',
+                    radius: '80%'
+                }
+            });
+        } catch (error) {
+            console.error('Error creating category chart:', error);
+        }
     }
 }
 
@@ -165,9 +182,17 @@ function updateChartPeriod(period) {
     // For demo purposes, we'll just reinitialize with slightly different data
     setTimeout(function() {
         // Remove existing charts
-        Object.values(Chart.instances).forEach(instance => {
-            instance.destroy();
-        });
+        try {
+            if (typeof Chart !== 'undefined' && Chart.instances) {
+                Object.values(Chart.instances).forEach(instance => {
+                    if (instance && typeof instance.destroy === 'function') {
+                        instance.destroy();
+                    }
+                });
+            }
+        } catch (error) {
+            console.warn('Error updating chart period:', error);
+        }
 
         // Reinitialize with new data based on period
         initializeChartsWithPeriod(period);
@@ -181,79 +206,83 @@ function initializeChartsWithPeriod(period) {
     // Sales Activity Chart with adjusted data
     const salesCtx = document.getElementById('salesChart');
     if (salesCtx) {
-        const baseData = [12, 19, 15, 25, 22, 30, 28, 35, 32, 40, 38, 45];
-        const adjustedData = baseData.map(value => Math.round(value * multiplier));
+        try {
+            const baseData = [12, 19, 15, 25, 22, 30, 28, 35, 32, 40, 38, 45];
+            const adjustedData = baseData.map(value => Math.round(value * multiplier));
 
-        const salesChart = new Chart(salesCtx, {
-            type: 'line',
-            data: {
-                labels: generateLabels(days),
-                datasets: [{
-                    label: 'Orders',
-                    data: adjustedData,
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: '#3b82f6',
-                    pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    pointRadius: 6,
-                    pointHoverRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        backgroundColor: '#1e293b',
-                        titleColor: '#ffffff',
-                        bodyColor: '#ffffff',
+            const salesChart = new Chart(salesCtx, {
+                type: 'line',
+                data: {
+                    labels: generateLabels(days),
+                    datasets: [{
+                        label: 'Orders',
+                        data: adjustedData,
                         borderColor: '#3b82f6',
-                        borderWidth: 1,
-                        cornerRadius: 8,
-                        displayColors: false,
-                        callbacks: {
-                            label: function(context) {
-                                return `Orders: ${context.parsed.y}`;
-                            }
-                        }
-                    }
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#3b82f6',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }]
                 },
-                scales: {
-                    x: {
-                        grid: {
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
                             display: false
                         },
-                        ticks: {
-                            color: '#64748b',
-                            font: {
-                                size: 12
-                            },
-                            maxTicksLimit: days > 7 ? 6 : days
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#3b82f6',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `Orders: ${context.parsed.y}`;
+                                }
+                            }
                         }
                     },
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: '#e2e8f0',
-                            borderDash: [2, 2]
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#64748b',
+                                font: {
+                                    size: 12
+                                },
+                                maxTicksLimit: days > 7 ? 6 : days
+                            }
                         },
-                        ticks: {
-                            color: '#64748b',
-                            font: {
-                                size: 12
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#e2e8f0',
+                                borderDash: [2, 2]
+                            },
+                            ticks: {
+                                color: '#64748b',
+                                font: {
+                                    size: 12
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
+            });
+        } catch (error) {
+            console.error('Error creating sales chart with period:', error);
+        }
     }
 }
 
@@ -280,9 +309,17 @@ function generateLabels(days) {
 // Function to refresh charts (called from Blazor)
 function refreshCharts() {
     // Remove existing charts using the correct Chart.js API
-    Object.values(Chart.instances).forEach(instance => {
-        instance.destroy();
-    });
+    try {
+        if (typeof Chart !== 'undefined' && Chart.instances) {
+            Object.values(Chart.instances).forEach(instance => {
+                if (instance && typeof instance.destroy === 'function') {
+                    instance.destroy();
+                }
+            });
+        }
+    } catch (error) {
+        console.warn('Error refreshing charts:', error);
+    }
 
     // Reinitialize charts
     setTimeout(function() {
