@@ -42,6 +42,14 @@ window.blazorCrudDemo.networkStatus = {
 // Error tracking and reporting
 window.blazorCrudDemo.errorTracking = {
     initialize: function () {
+        // Check if already initialized
+        if (this._initialized) {
+            console.log('Error tracking already initialized, skipping...');
+            return;
+        }
+
+        this._initialized = true;
+
         // Global error handler
         window.addEventListener('error', this.onError.bind(this));
         window.addEventListener('unhandledrejection', this.onUnhandledRejection.bind(this));
@@ -150,7 +158,18 @@ window.blazorCrudDemo.errorTracking = {
     }
 };
 
-// Initialize error tracking when DOM is ready
+// Initialize error tracking when DOM is ready (only if not already initialized)
 document.addEventListener('DOMContentLoaded', function() {
+    // Check if error tracking is already initialized
+    if (window.blazorCrudDemo && window.blazorCrudDemo.errorTracking && window.blazorCrudDemo.errorTracking._initialized) {
+        console.log('Error tracking already initialized, skipping...');
+        return;
+    }
+
+    // Mark as initialized
+    if (window.blazorCrudDemo && window.blazorCrudDemo.errorTracking) {
+        window.blazorCrudDemo.errorTracking._initialized = true;
+    }
+
     window.blazorCrudDemo.errorTracking.initialize();
 });
