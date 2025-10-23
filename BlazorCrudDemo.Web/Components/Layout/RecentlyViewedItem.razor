@@ -1,0 +1,81 @@
+@using Microsoft.AspNetCore.Components
+@using Microsoft.JSInterop
+
+<div class="recently-viewed-item" @onclick="NavigateToItem">
+    <div class="recent-icon">
+        <i class="bi @Icon"></i>
+    </div>
+    <div class="recent-details">
+        <div class="recent-title">@Title</div>
+        <div class="recent-url">@Url</div>
+    </div>
+    <div class="recent-time">@TimeAgo</div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Icon { get; set; } = string.Empty;
+    [Parameter] public string Url { get; set; } = string.Empty;
+    [Parameter] public string TimeAgo { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> OnItemClicked { get; set; }
+
+    [Inject] private NavigationManager Navigation { get; set; } = null!;
+
+    private void NavigateToItem()
+    {
+        Navigation.NavigateTo(Url);
+        OnItemClicked.InvokeAsync(Url);
+    }
+}
+
+<style>
+    .recently-viewed-item {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .recently-viewed-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .recent-icon {
+        width: 2rem;
+        height: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+        color: #94a3b8;
+    }
+
+    .recent-details {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .recent-title {
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .recent-url {
+        font-size: 0.75rem;
+        color: #94a3b8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .recent-time {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-left: 0.5rem;
+        white-space: nowrap;
+    }
+</style>
