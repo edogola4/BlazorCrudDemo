@@ -1,7 +1,9 @@
 @page "/auth/login"
 @using System
 @using Microsoft.AspNetCore.WebUtilities
+@using BlazorCrudDemo.Web.Services
 @inject NavigationManager Navigation
+@inject IAuthenticationService AuthenticationService
 
 <PageTitle>Login</PageTitle>
 
@@ -56,11 +58,19 @@
     private bool isLoading = false;
     private string returnUrl = "";
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        // Check if user is already authenticated
+        var isAuthenticated = await AuthenticationService.IsAuthenticatedAsync();
+        if (isAuthenticated)
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
         // Check for return URL parameter
         var uri = new Uri(Navigation.Uri);
         var queryParams = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
-        returnUrl = queryParams.FirstOrDefault(p => p.Key == "returnUrl").Value?.ToString() ?? "";
+        returnUrl = queryParams.FirstOrDefault(p => p.Key == "returnUrl").Value.ToString() ?? "";
     }
 }
