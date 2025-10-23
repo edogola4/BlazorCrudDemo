@@ -20,6 +20,14 @@ namespace BlazorCrudDemo.Web.Services
         private readonly ILogger<AuthenticationService> _logger;
         private readonly IAuditService _auditService;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        
+        // Implement the AuthenticationStateChanged event
+        public event Action? AuthenticationStateChanged;
+
+        private string GetUserAgent()
+        {
+            return _httpContextAccessor?.HttpContext?.Request?.Headers["User-Agent"].ToString() ?? "Unknown";
+        }
 
         public AuthenticationService(
             UserManager<ApplicationUser> userManager,
@@ -105,6 +113,9 @@ namespace BlazorCrudDemo.Web.Services
 
                     // Store refresh token
                     await _userManager.SetAuthenticationTokenAsync(user, "BlazorCrudDemo", "RefreshToken", refreshToken);
+
+                    // Notify subscribers of authentication state change
+                    NotifyAuthenticationStateChanged();
 
                     return new AuthResult
                     {
@@ -249,6 +260,9 @@ namespace BlazorCrudDemo.Web.Services
 
                 await _signInManager.SignOutAsync();
 
+                // Notify subscribers of authentication state change
+                NotifyAuthenticationStateChanged();
+
                 return new AuthResult
                 {
                     Success = true,
@@ -311,6 +325,9 @@ namespace BlazorCrudDemo.Web.Services
                     "BlazorCrudDemo",
                     "RefreshToken",
                     newRefreshToken);
+
+                // Notify subscribers of authentication state change
+                NotifyAuthenticationStateChanged();
 
                 return new AuthResult
                 {
@@ -490,8 +507,8 @@ namespace BlazorCrudDemo.Web.Services
             var expires = DateTime.Now.AddHours(1);
 
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"] ?? "https://localhost:5001",
-                audience: _configuration["Jwt:Audience"] ?? "https://localhost:5001",
+                issuer: _configuration["Jwt:Issuer"] ?? "https://localhost:5120",
+                audience: _configuration["Jwt:Audience"] ?? "https://localhost:5120",
                 claims: claims,
                 expires: expires,
                 signingCredentials: credentials);
@@ -530,9 +547,9 @@ namespace BlazorCrudDemo.Web.Services
             return _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
         }
 
-        private string GetUserAgent()
+        private void NotifyAuthenticationStateChanged()
         {
-            return _httpContextAccessor.HttpContext?.Request?.Headers["User-Agent"].ToString() ?? "unknown";
+            AuthenticationStateChanged?.Invoke();
         }
     }
 }
