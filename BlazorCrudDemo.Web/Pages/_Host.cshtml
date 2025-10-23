@@ -1,24 +1,289 @@
 @page "/"
 @namespace BlazorCrudDemo.Web.Pages
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@using Microsoft.AspNetCore.Components.Web
 @{
     Layout = "_Layout";
 }
 
-<!-- Add Syncfusion Script Manager -->
-<!-- <component type="typeof(Syncfusion.Blazor.ScriptManager)" render-mode="ServerPrerendered" /> -->
-
-<component type="typeof(BlazorCrudDemo.Web.App)" render-mode="Server" />
+<!-- Add error boundary for the entire app -->
+<CascadingValue Value="this">
+    <ErrorBoundary>
+        <component type="typeof(App)" render-mode="ServerPrerendered" />
+    </ErrorBoundary>
+</CascadingValue>
 
 <!-- Add Font Awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" 
+      integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" 
+      crossorigin="anonymous" referrerpolicy="no-referrer" />
 
 <!-- Add Chart.js for interactive charts -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<!-- Add custom dashboard charts JavaScript -->
-<script src="~/js/dashboard-charts.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js" 
+        integrity="sha512-ElRFoEQdI5Ht6kZvyzXhYG9NqjtkmlkfYk0wr6wHxU9JEHakS7UJZNeml5ALk+8IKlU6jDgMabC3vkumRokgJA==" 
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <!-- Add Syncfusion Essential JS 2 styles -->
-<!-- Using a stable version of SyncFusion CSS -->
 <link href="https://cdn.syncfusion.com/blazor/24.1.41/styles/bootstrap5.css" rel="stylesheet" />
+
+<!-- Blazor Error Handling Styles -->
+<link href="~/css/blazor-error-handling.css" rel="stylesheet" />
+
+<!-- Blazor Server Script -->
+<script src="_framework/blazor.server.js" autostart="false"></script>
+
+<!-- SignalR -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js" 
+        integrity="sha512-7rhBJh1om/W5Ztx7WiYOR9h2wlSaTmPyQMoHFtbT/FVNIA12y6S6I8HY9mrBS1uJ3dSU/R3qaSAXsGYuRjMDxg==" 
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+
+<!-- Custom Scripts -->
+<script src="~/js/site.js" asp-append-version="true"></script>
+<script src="~/js/dashboard-charts.js" asp-append-version="true" defer></script>
+<script src="~/js/layout.js" asp-append-version="true" defer></script>
+<script src="~/js/error-tracking.js" asp-append-version="true" defer></script>
+
+<script>
+    // Initialize Blazor when the page is fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if Blazor is already started - multiple checks for reliability
+        if (window.Blazor) {
+            // Check 1: If Blazor has active circuits
+            if (window.Blazor._internal && window.Blazor._internal.circuits && window.Blazor._internal.circuits.size > 0) {
+                console.log('Blazor is already started (active circuits detected)');
+                return;
+            }
+
+            // Check 2: If Blazor has navigation capability and internal state
+            if (window.Blazor.navigateTo && window.Blazor._internal) {
+                console.log('Blazor is already started (navigation capability detected)');
+                return;
+            }
+
+            // Check 3: If Blazor has reconnection handler (indicates it's been set up)
+            if (window.Blazor.defaultReconnectionHandler && window.Blazor.defaultReconnectionHandler.onConnectionDown) {
+                console.log('Blazor is already started (reconnection handler detected)');
+                return;
+            }
+        }
+
+        // Final check: global initialization flag
+        if (window._blazorInitialized) {
+            console.log('Blazor is already started (global flag detected)');
+            return;
+        }
+
+        // Check if SignalR is available
+        if (typeof signalR === 'undefined' || !signalR.HubConnectionBuilder) {
+            console.error('SignalR not loaded, cannot start Blazor');
+            handleFatalError(new Error('SignalR not loaded'));
+            return;
+        }
+
+        // Configure and start Blazor
+        try {
+            // Initialize Blazor with error handling
+            Blazor.start({
+                configureSignalR: function (builder) {
+                    return new signalR.HubConnectionBuilder()
+                        .withUrl("/_blazor")
+                        .withAutomaticReconnect({
+                            nextRetryDelayInMilliseconds: retryContext => {
+                                // Exponential backoff with jitter
+                                const baseDelay = 1000; // Start with 1 second
+                                const maxDelay = 30000; // Max 30 seconds
+                                const delay = Math.min(
+                                    maxDelay,
+                                    baseDelay * Math.pow(2, retryContext.previousRetryCount) + 
+                                    (Math.random() * 1000) // Add jitter
+                                );
+                                
+                                console.log(`Attempting to reconnect in ${Math.round(delay/1000)} seconds...`);
+                                return delay;
+                            }
+                        })
+                        .configureLogging(signalR.LogLevel.Warning)
+                        .build();
+                }
+            }).then(() => {
+                console.log('Blazor started successfully');
+
+                // Set global flag to prevent double initialization
+                window._blazorInitialized = true;
+
+                // Clean up any error states
+                document.body.classList.remove('blazor-error', 'reconnecting');
+                
+                // Set up global error handlers and reconnection handlers
+                setupGlobalErrorHandlers();
+                setupReconnectionHandlers();
+                
+            }).catch(error => {
+                console.error('Failed to start Blazor:', error);
+                handleFatalError(error);
+            });
+            
+        } catch (error) {
+            console.error('Error initializing Blazor:', error);
+            handleFatalError(error);
+        }
+    });
+    
+    // Set up global error handlers
+    function setupGlobalErrorHandlers() {
+        // Handle unhandled promise rejections
+        window.addEventListener('unhandledrejection', function (event) {
+            console.error('Unhandled rejection:', event.reason);
+            
+            // Handle Blazor-specific errors
+            if (event.reason && event.reason.message) {
+                const message = event.reason.message;
+                
+                // Handle renderer errors
+                if (message.includes('There is no browser renderer with ID') ||
+                    message.includes('No element is currently associated with component') ||
+                    message.includes('A task was canceled')) {
+                    console.warn('Blazor renderer error detected, reloading...');
+                    schedulePageReload();
+                    event.preventDefault();
+                    return true;
+                }
+                
+                // Handle navigation errors
+                if (message.includes('Navigation failed when changing the location to')) {
+                    console.warn('Navigation error detected, reloading...');
+                    schedulePageReload();
+                    event.preventDefault();
+                    return true;
+                }
+            }
+            
+            return false;
+        });
+        
+        // Handle JavaScript errors
+        window.addEventListener('error', function (event) {
+            console.error('Uncaught error:', event.error);
+            
+            // Handle Blazor renderer errors from error events
+            if (event.error && 
+                event.error.message && 
+                (event.error.message.includes('There is no browser renderer with ID') ||
+                 event.error.message.includes('No element is currently associated with component'))) {
+                console.warn('Blazor renderer error detected from error event, reloading...');
+                schedulePageReload();
+                event.preventDefault();
+                return true;
+            }
+            
+            return false;
+        });
+    }
+    
+    // Schedule a page reload with a small delay
+    function schedulePageReload() {
+        // Only reload if we're not already in the process of reloading
+        if (!window._isReloading) {
+            window._isReloading = true;
+            
+            // Show a message to the user
+            const reloadMessage = document.createElement('div');
+            reloadMessage.className = 'reconnecting';
+            reloadMessage.innerHTML = `
+                <div class="blazor-spinner"></div>
+                <h5>Reconnecting to the application...</h5>
+                <p>If this message persists, please refresh the page.</p>
+            `;
+            
+            document.body.appendChild(reloadMessage);
+            
+            // Try to reload after a short delay
+            setTimeout(() => {
+                if (window.Blazor && window.Blazor._internal && window.Blazor._internal.forceCloseConnection) {
+                    try {
+                        window.Blazor._internal.forceCloseConnection();
+                    } catch (e) {
+                        console.warn('Error closing connection:', e);
+                    }
+                }
+                window.location.reload();
+            }, 100);
+        }
+    }
+    
+    // Handle fatal errors by showing a user-friendly message
+    function handleFatalError(error) {
+        console.error('A fatal error occurred:', error);
+        
+        // Add error class to body
+        document.body.classList.add('blazor-error');
+        
+        // Create and show error message
+        const errorContainer = document.createElement('div');
+        errorContainer.className = 'blazor-error-boundary';
+        errorContainer.innerHTML = `
+            <h4>Application Error</h4>
+            <p>An unexpected error occurred while loading the application. Please try refreshing the page.</p>
+            <details style="margin-top: 1rem; font-size: 0.875rem;">
+                <summary>Error details</summary>
+                <pre style="background: rgba(0,0,0,0.05); padding: 0.5rem; border-radius: 0.25rem; overflow: auto; max-height: 200px;">
+${error?.message || 'Unknown error'}
+                </pre>
+            </details>
+            <button onclick="window.location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #0d6efd; color: white; border: none; border-radius: 0.25rem; cursor: pointer;">
+                Refresh Page
+            </button>
+        `;
+        
+        // Clear the body and show the error
+        document.body.innerHTML = '';
+        document.body.appendChild(errorContainer);
+    }
+    
+    // Set up reconnection handlers after Blazor starts
+    function setupReconnectionHandlers() {
+        // Wait a bit for Blazor to fully initialize
+        setTimeout(() => {
+            if (window.Blazor && window.Blazor.defaultReconnectionHandler) {
+                window.Blazor.defaultReconnectionHandler._reconnectCallback = function(d) {
+                    console.log('Blazor reconnection attempt', d);
+                };
+
+                window.Blazor.defaultReconnectionHandler.onConnectionDown = function() {
+                    console.warn('Blazor connection lost, attempting to reconnect...');
+                    document.body.classList.add('reconnecting');
+                    return true; // Let the default reconnection handler continue
+                };
+
+                window.Blazor.defaultReconnectionHandler.onConnectionUp = function() {
+                    console.log('Blazor connection reestablished');
+                    document.body.classList.remove('reconnecting');
+                };
+            }
+        }, 1000); // Wait 1 second for Blazor to initialize
+    }
+</script>
+
+<style>
+    .reconnecting {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+    
+    .blazor-error {
+        padding: 1rem;
+        background-color: #fef2f2;
+        color: #b91c1c;
+    }
+</style>
