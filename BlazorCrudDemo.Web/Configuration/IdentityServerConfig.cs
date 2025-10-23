@@ -48,13 +48,13 @@ namespace BlazorCrudDemo.Web.Configuration
 
                     RedirectUris = new List<string>
                     {
-                        "https://localhost:5001/authentication/login-callback",
-                        "https://localhost:5001/authentication/logout-callback"
+                        "https://localhost:5120/authentication/login-callback",
+                        "https://localhost:5120/authentication/logout-callback"
                     },
 
                     PostLogoutRedirectUris = new List<string>
                     {
-                        "https://localhost:5001/"
+                        "https://localhost:5120/"
                     },
 
                     AllowedScopes = new List<string>
@@ -71,7 +71,7 @@ namespace BlazorCrudDemo.Web.Configuration
 
                     AllowedCorsOrigins = new List<string>
                     {
-                        "https://localhost:5001"
+                        "https://localhost:5120"
                     },
 
                     AccessTokenLifetime = 3600, // 1 hour
@@ -92,7 +92,7 @@ namespace BlazorCrudDemo.Web.Configuration
 
                     RedirectUris = new List<string>
                     {
-                        "https://localhost:5001/authentication/login-callback"
+                        "https://localhost:5120/authentication/login-callback"
                     },
 
                     AllowedScopes = new List<string>
@@ -106,7 +106,7 @@ namespace BlazorCrudDemo.Web.Configuration
 
                     AllowedCorsOrigins = new List<string>
                     {
-                        "https://localhost:5001"
+                        "https://localhost:5120"
                     },
 
                     AccessTokenLifetime = 3600, // 1 hour
