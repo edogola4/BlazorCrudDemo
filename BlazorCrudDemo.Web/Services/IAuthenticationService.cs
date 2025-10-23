@@ -16,5 +16,8 @@ namespace BlazorCrudDemo.Web.Services
         Task<ApplicationUserDto> GetCurrentUserAsync();
         Task<bool> IsAuthenticatedAsync();
         Task<List<Claim>> GetUserClaimsAsync();
+        
+        // Event for authentication state changes
+        event Action AuthenticationStateChanged;
     }
 }
