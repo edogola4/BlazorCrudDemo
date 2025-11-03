@@ -1,6 +1,8 @@
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.JSInterop
+@using BlazorCrudDemo.Web.Services
 @inject IJSRuntime JSRuntime
+@inject ModalService ModalService
 
 <div class="top-bar">
     <div class="top-bar-left">
@@ -144,28 +146,47 @@
     private void ToggleMobileMenu()
     {
         // In a real app, this would toggle mobile menu visibility
-        // For now, we'll just show a simple alert
-        JSRuntime.InvokeVoidAsync("alert", "Mobile menu toggle clicked");
+        ModalService.Show(
+            "Mobile Menu",
+            "Mobile menu functionality will be implemented here. This would typically show a slide-out navigation menu for mobile devices.",
+            ModalType.Info
+        );
     }
 
     private void HandleQuickAction()
     {
-        JSRuntime.InvokeVoidAsync("alert", "Quick action clicked");
+        ModalService.Show(
+            "Quick Action",
+            "Quick action functionality will be implemented here.",
+            ModalType.Info
+        );
     }
 
     private void HandleNewItem()
     {
-        JSRuntime.InvokeVoidAsync("alert", "New item clicked");
+        ModalService.Show(
+            "Create New Item",
+            "This will open a form to create a new product, category, or other item. Choose what you'd like to create:",
+            ModalType.Info
+        );
     }
 
     private void ToggleNotifications()
     {
-        JSRuntime.InvokeVoidAsync("alert", "Notifications clicked");
+        ModalService.Show(
+            "Notifications",
+            $"You have {NotificationCount} unread notifications. This will show your recent activity, updates, and alerts.",
+            ModalType.Info
+        );
     }
 
     private void ToggleSettings()
     {
-        JSRuntime.InvokeVoidAsync("alert", "Settings clicked");
+        ModalService.Show(
+            "Settings",
+            "Application settings panel will be displayed here. You can configure preferences, notifications, appearance, and more.",
+            ModalType.Info
+        );
     }
 
     private void ToggleTheme()
