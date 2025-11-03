@@ -308,6 +308,9 @@ builder.Services.AddScoped<BlazorCrudDemo.Web.Services.IAuthenticationService, B
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 
+// Register modal service
+builder.Services.AddScoped<ModalService>();
+
 // Register background services
 builder.Services.AddHostedService<MaintenanceBackgroundService>();
 builder.Services.AddHostedService<CacheCleanupBackgroundService>();
