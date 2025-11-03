@@ -210,7 +210,18 @@
         padding: 0.125rem 0.5rem;
         border-radius: 9999px;
     }
-        
+
+    .nav-separator {
+        margin: 1rem 0.5rem 0.5rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #94a3b8;
+        letter-spacing: 0.05em;
+    }
+
+    .navbar-container {
         position: fixed;
         top: 0;
         left: 0;
@@ -257,12 +268,6 @@
         width: 0;
         margin: 0;
         padding: 0;
-    }
-
-    .navbar-nav {
-        flex: 1;
-        overflow-y: auto;
-        padding: 10px 0;
     }
 
     .nav-item {
@@ -522,44 +527,6 @@
     }
 </style>
 
-<!-- User Profile Section -->
-        <div class="user-profile">
-            <div class="user-avatar" @onclick="ToggleUserMenu">
-                <img src="/images/avatar.png" alt="User" onerror="this.src='https://ui-avatars.com/api/?name=@(currentUser?.UserName ?? "User")&background=random'" />
-                @if (!IsCollapsed)
-                {
-                    <div class="user-info">
-                        <div class="user-name">@(currentUser?.UserName ?? "Guest")</div>
-                        <div class="user-role">@(currentUser?.Roles?.FirstOrDefault() ?? "User")</div>
-                    </div>
-                    <i class="bi bi-chevron-down"></i>
-                }
-            </div>
-            
-            @if (showUserMenu)
-            {
-                <div class="user-dropdown">
-                    <NavLink href="/profile" class="dropdown-item" @onclick="() => showUserMenu = false">
-                        <i class="bi bi-person"></i> Profile
-                    </NavLink>
-                    <NavLink href="/settings" class="dropdown-item" @onclick="() => showUserMenu = false">
-                        <i class="bi bi-gear"></i> Settings
-                    </NavLink>
-                    <div class="dropdown-divider"></div>
-                    <a href="#" class="dropdown-item text-danger" @onclick:preventDefault @onclick="HandleLogout">
-                        <i class="bi bi-box-arrow-right"></i> Logout
-                    </a>
-                </div>
-            }
-        </div>
-    </nav>
-    
-    <!-- Mobile Toggle Button -->
-    <button class="navbar-toggler" @onclick="ToggleCollapse">
-        <i class="bi @(IsCollapsed ? "bi-list" : "bi-x-lg") "></i>
-    </button>
-</div>
-
 @code {
     private bool isInitialized = false;
     private bool isDisposed = false;
@@ -592,6 +559,19 @@
         }
     }
     
+    private async Task InitializeAsync()
+    {
+        try
+        {
+            currentUser = await AuthenticationService.GetCurrentUserAsync();
+            AuthenticationService.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during initialization");
+        }
+    }
+    
     private async Task CheckForUpdates()
     {
         try
@@ -608,11 +588,34 @@
         }
     }
 
-    private async void OnAuthenticationStateChanged(Task<ApplicationUserDto> userTask)
+    private void ToggleUserMenu()
+    {
+        showUserMenu = !showUserMenu;
+    }
+
+    private void ToggleCollapse()
+    {
+        IsCollapsed = !IsCollapsed;
+    }
+
+    private async Task HandleLogout()
     {
         try
         {
-            currentUser = await userTask;
+            await AuthenticationService.LogoutAsync();
+            Navigation.NavigateTo("/login", true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during logout");
+        }
+    }
+
+    private async void OnAuthenticationStateChanged()
+    {
+        try
+        {
+            currentUser = await AuthenticationService.GetCurrentUserAsync();
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
