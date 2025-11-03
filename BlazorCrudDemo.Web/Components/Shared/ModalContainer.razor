@@ -1,0 +1,48 @@
+@using BlazorCrudDemo.Web.Services
+@inject ModalService ModalService
+@implements IDisposable
+
+<Modal Title="@_title"
+       Message="@_message"
+       Type="@_type"
+       IsVisible="@_isVisible"
+       OnClose="@HandleClose" />
+
+@code {
+    private string _title = "";
+    private string _message = "";
+    private ModalType _type = ModalType.Info;
+    private bool _isVisible = false;
+
+    protected override void OnInitialized()
+    {
+        ModalService.OnShow += ShowModal;
+        ModalService.OnClose += CloseModal;
+    }
+
+    private void ShowModal(string title, string message, ModalType type)
+    {
+        _title = title;
+        _message = message;
+        _type = type;
+        _isVisible = true;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void CloseModal()
+    {
+        _isVisible = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleClose()
+    {
+        CloseModal();
+    }
+
+    public void Dispose()
+    {
+        ModalService.OnShow -= ShowModal;
+        ModalService.OnClose -= CloseModal;
+    }
+}
