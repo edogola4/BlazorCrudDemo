@@ -8,96 +8,62 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject ILogger<NavMenu> Logger
+@inject IConfiguration Configuration
+
+@implements IDisposable
 
 @if (isInitialized)
 {
-    <div class="nav-menu @(IsMobile ? "mobile-nav" : "desktop-nav") @(IsCollapsed ? "collapsed" : "")">
-    <!-- Navigation Items -->
-    <nav class="nav-items">
-
+    <div class="sidebar-nav-menu">
         <!-- Home -->
-        <div class="nav-item @(IsActive("/") ? "active" : "")" @onclick="() => NavigateToHome()">
-            <NavLink href="/" class="nav-link" Match="NavLinkMatch.All">
-                <div class="nav-icon-wrapper">
-                    <i class="bi bi-house-door-fill nav-icon"></i>
-                    @if (!IsCollapsed)
-                    {
-                        <span class="nav-text">Home</span>
-                    }
-                    else
-                    {
-                        <span class="nav-tooltip">Home</span>
-                    }
-                </div>
-                @if (IsActive("/"))
+        <NavLink href="/" class="nav-item" Match="NavLinkMatch.All">
+            <div class="nav-link">
+                <i class="bi bi-house-door-fill"></i>
+                @if (!IsCollapsed)
                 {
-                    <div class="nav-indicator"></div>
+                    <span class="nav-text">Dashboard</span>
                 }
-            </NavLink>
-        </div>
-
-        <!-- Search -->
-        <div class="nav-item @(IsActive("/products/search") ? "active" : "")" @onclick="() => NavigateToSearch()">
-            <NavLink href="products/search" class="nav-link">
-                <div class="nav-icon-wrapper">
-                    <i class="bi bi-search nav-icon"></i>
-                    @if (!IsCollapsed)
-                    {
-                        <span class="nav-text">Search</span>
-                    }
-                    else
-                    {
-                        <span class="nav-tooltip">Search</span>
-                    }
-                </div>
-                @if (IsActive("/products/search"))
-                {
-                    <div class="nav-indicator"></div>
-                }
-            </NavLink>
-        </div>
+            </div>
+        </NavLink>
 
         <!-- Products -->
-        <div class="nav-item @(IsActive("/products") ? "active" : "")" @onclick="() => NavigateToProducts()">
-            <NavLink href="products" class="nav-link">
-                <div class="nav-icon-wrapper">
-                    <i class="bi bi-box-seam nav-icon"></i>
-                    @if (!IsCollapsed)
-                    {
-                        <span class="nav-text">Products</span>
-                    }
-                    else
-                    {
-                        <span class="nav-tooltip">Products</span>
-                    }
-                </div>
-                @if (IsActive("/products"))
+        <NavLink href="/products" class="nav-item">
+            <div class="nav-link">
+                <i class="bi bi-box-seam"></i>
+                @if (!IsCollapsed)
                 {
-                    <div class="nav-indicator"></div>
+                    <div class="nav-text-container">
+                        <span class="nav-text">Products</span>
+                        @if (pendingUpdates > 0)
+                        {
+                            <span class="badge bg-danger">@pendingUpdates</span>
+                        }
+                    </div>
                 }
-            </NavLink>
-        </div>
+            </div>
+        </NavLink>
 
         <!-- Categories -->
-        <div class="nav-item @(IsActive("/categories") ? "active" : "")" @onclick="() => NavigateToCategories()">
-            <NavLink href="categories" class="nav-link">
-                <div class="nav-icon-wrapper">
-                    <i class="bi bi-folder nav-icon"></i>
-                    @if (!IsCollapsed)
-                    {
-                        <span class="nav-text">Categories</span>
-                    }
-                    else
-                    {
-                        <span class="nav-tooltip">Categories</span>
-                    }
-                </div>
-                @if (IsActive("/categories"))
+        <NavLink href="/categories" class="nav-item">
+            <div class="nav-link">
+                <i class="bi bi-tags"></i>
+                @if (!IsCollapsed)
                 {
-                    <div class="nav-indicator"></div>
+                    <span class="nav-text">Categories</span>
                 }
-            </NavLink>
-        </div>
+            </div>
+        </NavLink>
+
+        <!-- Search -->
+        <NavLink href="/products/search" class="nav-item">
+            <div class="nav-link">
+                <i class="bi bi-search"></i>
+                @if (!IsCollapsed)
+                {
+                    <span class="nav-text">Search</span>
+                }
+            </div>
+        </NavLink>
 
         <!-- Admin Section (Only for Admin users) -->
         @if (currentUser != null && currentUser.Roles.Contains("Admin"))
@@ -111,67 +77,37 @@
             </div>
 
             <!-- User Management -->
-            <div class="nav-item @(IsActive("/admin/users") ? "active" : "")" @onclick="() => NavigateToUserManagement()">
-                <NavLink href="admin/users" class="nav-link">
-                    <div class="nav-icon-wrapper">
-                        <i class="bi bi-people nav-icon"></i>
-                        @if (!IsCollapsed)
-                        {
-                            <span class="nav-text">User Management</span>
-                        }
-                        else
-                        {
-                            <span class="nav-tooltip">User Management</span>
-                        }
-                    </div>
-                    @if (IsActive("/admin/users"))
+            <NavLink href="/admin/users" class="nav-item" Match="NavLinkMatch.Prefix">
+                <div class="nav-link">
+                    <i class="bi bi-people nav-icon"></i>
+                    @if (!IsCollapsed)
                     {
-                        <div class="nav-indicator"></div>
+                        <span class="nav-text">User Management</span>
                     }
-                </NavLink>
-            </div>
+                </div>
+            </NavLink>
 
             <!-- Audit Logs -->
-            <div class="nav-item @(IsActive("/admin/audit") ? "active" : "")" @onclick="() => NavigateToAuditLogs()">
-                <NavLink href="admin/audit" class="nav-link">
-                    <div class="nav-icon-wrapper">
-                        <i class="bi bi-journal-text nav-icon"></i>
-                        @if (!IsCollapsed)
-                        {
-                            <span class="nav-text">Audit Logs</span>
-                        }
-                        else
-                        {
-                            <span class="nav-tooltip">Audit Logs</span>
-                        }
-                    </div>
-                    @if (IsActive("/admin/audit"))
+            <NavLink href="/admin/audit" class="nav-item" Match="NavLinkMatch.Prefix">
+                <div class="nav-link">
+                    <i class="bi bi-journal-text nav-icon"></i>
+                    @if (!IsCollapsed)
                     {
-                        <div class="nav-indicator"></div>
+                        <span class="nav-text">Audit Logs</span>
                     }
-                </NavLink>
-            </div>
+                </div>
+            </NavLink>
 
             <!-- Reports -->
-            <div class="nav-item @(IsActive("/admin/reports") ? "active" : "")" @onclick="() => NavigateToReports()">
-                <NavLink href="admin/reports" class="nav-link">
-                    <div class="nav-icon-wrapper">
-                        <i class="bi bi-bar-chart nav-icon"></i>
-                        @if (!IsCollapsed)
-                        {
-                            <span class="nav-text">Reports</span>
-                        }
-                        else
-                        {
-                            <span class="nav-tooltip">Reports</span>
-                        }
-                    </div>
-                    @if (IsActive("/admin/reports"))
+            <NavLink href="/admin/reports" class="nav-item" Match="NavLinkMatch.Prefix">
+                <div class="nav-link">
+                    <i class="bi bi-bar-chart nav-icon"></i>
+                    @if (!IsCollapsed)
                     {
-                        <div class="nav-indicator"></div>
+                        <span class="nav-text">Reports</span>
                     }
-                </NavLink>
-            </div>
+                </div>
+            </NavLink>
         }
 
         <!-- Account Section -->
@@ -183,182 +119,202 @@
         </div>
 
         <!-- Account Settings -->
-        <div class="nav-item @(IsActive("/account/settings") ? "active" : "")" @onclick="() => NavigateToAccountSettings()">
-            <NavLink href="account/settings" class="nav-link">
-                <div class="nav-icon-wrapper">
-                    <i class="bi bi-person-gear nav-icon"></i>
-                    @if (!IsCollapsed)
-                    {
-                        <span class="nav-text">Account Settings</span>
-                    }
-                    else
-                    {
-                        <span class="nav-tooltip">Account Settings</span>
-                    }
-                </div>
-                @if (IsActive("/account/settings"))
+        <NavLink href="/account/settings" class="nav-item" Match="NavLinkMatch.Prefix">
+            <div class="nav-link">
+                <i class="bi bi-person-gear nav-icon"></i>
+                @if (!IsCollapsed)
                 {
-                    <div class="nav-indicator"></div>
+                    <span class="nav-text">Account Settings</span>
                 }
-            </NavLink>
-        </div>
+            </div>
+        </NavLink>
 
         <!-- Profile -->
-        <div class="nav-item @(IsActive("/account/profile") ? "active" : "")" @onclick="() => NavigateToProfile()">
-            <NavLink href="account/profile" class="nav-link">
-                <div class="nav-icon-wrapper">
-                    <i class="bi bi-person-circle nav-icon"></i>
-                    @if (!IsCollapsed)
-                    {
-                        <span class="nav-text">Profile</span>
-                    }
-                    else
-                    {
-                        <span class="nav-tooltip">Profile</span>
-                    }
-                </div>
-                @if (IsActive("/account/profile"))
+        <NavLink href="/account/profile" class="nav-item" Match="NavLinkMatch.Prefix">
+            <div class="nav-link">
+                <i class="bi bi-person-circle nav-icon"></i>
+                @if (!IsCollapsed)
                 {
-                    <div class="nav-indicator"></div>
+                    <span class="nav-text">Profile</span>
                 }
-            </NavLink>
-        </div>
+            </div>
+        </NavLink>
 
         <!-- Logout -->
-        <div class="nav-item logout-item" @onclick="HandleLogout">
+        <NavLink href="/logout" class="nav-item logout-item" Match="NavLinkMatch.Prefix">
             <div class="nav-link">
-                <div class="nav-icon-wrapper">
-                    <i class="bi bi-box-arrow-right nav-icon text-danger"></i>
-                    @if (!IsCollapsed)
-                    {
-                        <span class="nav-text text-danger">Logout</span>
-                    }
-                    else
-                    {
-                        <span class="nav-tooltip text-danger">Logout</span>
-                    }
-                </div>
+                <i class="bi bi-box-arrow-right nav-icon text-danger"></i>
+                @if (!IsCollapsed)
+                {
+                    <span class="nav-text text-danger">Logout</span>
+                }
             </div>
-        </div>
-    </nav>
-</div>
+        </NavLink>
+    </div>
 }
 
 <style>
-    .nav-menu {
-        height: 100%;
+    .sidebar-nav-menu {
         display: flex;
         flex-direction: column;
-        transition: width 0.3s ease;
-    }
-
-    .nav-items {
-        flex: 1;
         padding: 0.5rem 0;
-        overflow-y: auto;
-        overflow-x: hidden;
-    }
-
-    /* Custom scrollbar */
-    .nav-items::-webkit-scrollbar {
-        width: 4px;
-    }
-
-    .nav-items::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    .nav-items::-webkit-scrollbar-thumb {
-        background: #475569;
-        border-radius: 2px;
-    }
-
-    .nav-items::-webkit-scrollbar-thumb:hover {
-        background: #64748b;
     }
 
     .nav-item {
-        position: relative;
-        margin: 0.25rem 0;
+        margin: 0.25rem 0.5rem;
+        border-radius: 0.375rem;
+        transition: background-color 0.2s;
+    }
+
+    .nav-item:hover {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-item.active {
+        background-color: rgba(59, 130, 246, 0.2);
     }
 
     .nav-link {
         display: flex;
         align-items: center;
         padding: 0.75rem 1rem;
-        color: #cbd5e1;
+        color: #e2e8f0;
         text-decoration: none;
         border-radius: 0.375rem;
-        margin: 0 0.5rem;
-        transition: all 0.2s ease;
-        position: relative;
     }
 
-    .nav-link:hover {
-        background-color: #334155;
-        color: #f8fafc;
+    .nav-link i {
+        font-size: 1.25rem;
+        width: 2rem;
+        display: flex;
+        justify-content: center;
+    }
+
+    .nav-text {
+        margin-left: 0.75rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .nav-text-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex: 1;
+    }
+
+    .badge {
+        margin-left: 0.5rem;
+        font-size: 0.75rem;
+        padding: 0.125rem 0.5rem;
+        border-radius: 9999px;
+    }
+        
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: var(--sidebar-width);
+        background: var(--primary-color);
+        color: var(--text-color);
+        display: flex;
+        flex-direction: column;
+        transition: width var(--transition-speed) ease;
+        z-index: 1000;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .navbar-container.collapsed {
+        width: var(--collapsed-width);
+    }
+
+    .navbar-brand {
+        display: flex;
+        align-items: center;
+        padding: 20px 15px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all var(--transition-speed) ease;
+    }
+
+    .navbar-logo {
+        width: 32px;
+        height: 32px;
+        margin-right: 12px;
+    }
+
+    .app-name {
+        font-size: 1.25rem;
+        font-weight: 600;
+        white-space: nowrap;
+        opacity: 1;
+        transition: opacity var(--transition-speed) ease;
+    }
+
+    .navbar-container.collapsed .app-name {
+        opacity: 0;
+        width: 0;
+        margin: 0;
+        padding: 0;
+    }
+
+    .navbar-nav {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px 0;
+    }
+
+    .nav-item {
+        position: relative;
+        margin: 5px 10px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+    }
+
+    .nav-item:hover {
+        background: var(--hover-bg);
+    }
+
+    .nav-item.active {
+        background: var(--accent-color);
+    }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        padding: 12px 15px;
+        color: var(--text-color);
+        text-decoration: none;
+        border-radius: 8px;
+        transition: all var(--transition-speed) ease;
     }
 
     .nav-icon-wrapper {
         display: flex;
         align-items: center;
-        gap: 0.75rem;
         width: 100%;
-        position: relative;
     }
 
     .nav-icon {
         font-size: 1.25rem;
-        min-width: 1.25rem;
-        text-align: center;
-        transition: all 0.2s ease;
-        color: #cbd5e1;
+        min-width: 24px;
+        margin-right: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .nav-text {
-        font-weight: 500;
         white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        transition: opacity 0.2s ease;
+        transition: opacity var(--transition-speed) ease;
     }
 
-    /* Tooltip for collapsed state */
-    .nav-tooltip {
-        position: absolute;
-        left: 100%;
-        margin-left: 1rem;
-        padding: 0.5rem 0.75rem;
-        background: #1e293b;
-        color: white;
-        border-radius: 0.375rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-        white-space: nowrap;
+    .navbar-container.collapsed .nav-text {
         opacity: 0;
-        pointer-events: none;
-        transform: translateX(-10px);
-        transition: all 0.2s ease;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        z-index: 1000;
-    }
-
-    .nav-tooltip::before {
-        content: '';
-        position: absolute;
-        left: -4px;
-        top: 50%;
-        transform: translateY(-50%);
         width: 0;
-        height: 0;
-        border-top: 4px solid transparent;
-        border-bottom: 4px solid transparent;
-        border-right: 4px solid #1e293b;
-    }
-
-    .collapsed .nav-link:hover .nav-tooltip {
-        opacity: 1;
-        transform: translateX(0);
+        margin: 0;
+        padding: 0;
     }
 
     .nav-indicator {
@@ -366,63 +322,249 @@
         left: 0;
         top: 50%;
         transform: translateY(-50%);
-        width: 3px;
+        width: 4px;
+        height: 0;
+        background: var(--text-color);
+        border-radius: 0 4px 4px 0;
+        transition: height 0.2s ease;
+    }
+
+    .nav-item.active .nav-indicator {
         height: 60%;
-        background: #1e3a8a;
-        border-radius: 0 2px 2px 0;
     }
 
-    /* Active state */
-    .nav-item.active .nav-link {
-        background-color: #334155;
-        color: #f8fafc;
+    .badge {
+        margin-left: auto;
+        font-size: 0.7rem;
+        padding: 2px 6px;
+        border-radius: 10px;
     }
 
-    .nav-item.active .nav-icon {
-        color: #f8fafc;
+    /* User Profile */
+    .user-profile {
+        margin-top: auto;
+        padding: 15px 10px;
+        border-top: 1px solid var(--border-color);
+        position: relative;
     }
 
-    /* Nav separator */
-    .nav-separator {
-        margin: 1rem 0.5rem 0.5rem;
-        padding: 0 0.5rem;
-        border-top: 1px solid #334155;
-        padding-top: 0.5rem;
+    .user-avatar {
+        display: flex;
+        align-items: center;
+        padding: 8px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
     }
 
-    .nav-separator span {
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: #cbd5e1;
-        opacity: 0.7;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+    .user-avatar:hover {
+        background: var(--hover-bg);
     }
 
-    /* Logout item styling */
-    .logout-item .nav-link {
-        color: #cbd5e1;
+    .user-avatar img {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        margin-right: 12px;
+        object-fit: cover;
     }
 
-    .logout-item .nav-link:hover {
-        background-color: #334155;
-        color: #f8fafc;
+    .user-info {
+        flex: 1;
+        overflow: hidden;
     }
 
-    .logout-item .nav-icon {
-        color: #cbd5e1;
+    .user-name {
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
-    .text-danger {
-        color: #dc2626 !important;
+    .user-role {
+        font-size: 0.8rem;
+        color: #94a3b8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
-    /* High contrast mode support - removed media query for build compatibility */
-    </style>
+    .user-dropdown {
+        position: absolute;
+        bottom: 100%;
+        left: 10px;
+        right: 10px;
+        background: var(--secondary-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        z-index: 100;
+        margin-bottom: 10px;
+        transform-origin: bottom;
+        animation: dropdownFadeIn 0.2s ease;
+    }
+
+    @@keyframes dropdownFadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .dropdown-item {
+        padding: 10px 15px;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .dropdown-item:hover {
+        background: var(--hover-bg);
+    }
+
+    .dropdown-item i {
+        margin-right: 10px;
+        width: 20px;
+        text-align: center;
+    }
+
+    .dropdown-divider {
+        height: 1px;
+        background: var(--border-color);
+        margin: 5px 0;
+    }
+
+    /* Mobile Styles */
+    .mobile-nav {
+        width: 100%;
+        height: 60px;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: auto;
+        flex-direction: row;
+        justify-content: space-around;
+        padding: 0;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .mobile-nav .navbar-nav {
+        display: flex;
+        flex-direction: row;
+        padding: 0;
+        width: 100%;
+    }
+
+    .mobile-nav .nav-item {
+        margin: 5px;
+        flex: 1;
+        text-align: center;
+    }
+
+    .mobile-nav .nav-link {
+        flex-direction: column;
+        padding: 8px 5px;
+        font-size: 0.7rem;
+    }
+
+    .mobile-nav .nav-icon {
+        margin: 0 0 4px 0;
+        font-size: 1.2rem;
+    }
+
+    .mobile-nav .nav-text {
+        font-size: 0.7rem;
+        opacity: 1 !important;
+        width: auto !important;
+    }
+
+    .mobile-nav .navbar-brand,
+    .mobile-nav .user-profile {
+        display: none;
+    }
+
+    /* Collapsed State */
+    .navbar-container:not(.mobile-nav).collapsed .nav-item {
+        margin: 5px 0;
+        text-align: center;
+    }
+
+    .navbar-container:not(.mobile-nav).collapsed .nav-link {
+        padding: 12px 5px;
+        justify-content: center;
+    }
+
+    .navbar-container:not(.mobile-nav).collapsed .nav-icon {
+        margin: 0;
+    }
+
+    /* Toggle Button */
+    .navbar-toggler {
+        position: absolute;
+        top: 15px;
+        right: -40px;
+        width: 32px;
+        height: 32px;
+        background: var(--primary-color);
+        border: none;
+        border-radius: 4px;
+        color: var(--text-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 1001;
+        box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.2);
+    }
+
+    .mobile-nav .navbar-toggler {
+        display: none;
+    }
+</style>
+
+<!-- User Profile Section -->
+        <div class="user-profile">
+            <div class="user-avatar" @onclick="ToggleUserMenu">
+                <img src="/images/avatar.png" alt="User" onerror="this.src='https://ui-avatars.com/api/?name=@(currentUser?.UserName ?? "User")&background=random'" />
+                @if (!IsCollapsed)
+                {
+                    <div class="user-info">
+                        <div class="user-name">@(currentUser?.UserName ?? "Guest")</div>
+                        <div class="user-role">@(currentUser?.Roles?.FirstOrDefault() ?? "User")</div>
+                    </div>
+                    <i class="bi bi-chevron-down"></i>
+                }
+            </div>
+            
+            @if (showUserMenu)
+            {
+                <div class="user-dropdown">
+                    <NavLink href="/profile" class="dropdown-item" @onclick="() => showUserMenu = false">
+                        <i class="bi bi-person"></i> Profile
+                    </NavLink>
+                    <NavLink href="/settings" class="dropdown-item" @onclick="() => showUserMenu = false">
+                        <i class="bi bi-gear"></i> Settings
+                    </NavLink>
+                    <div class="dropdown-divider"></div>
+                    <a href="#" class="dropdown-item text-danger" @onclick:preventDefault @onclick="HandleLogout">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </div>
+            }
+        </div>
+    </nav>
+    
+    <!-- Mobile Toggle Button -->
+    <button class="navbar-toggler" @onclick="ToggleCollapse">
+        <i class="bi @(IsCollapsed ? "bi-list" : "bi-x-lg") "></i>
+    </button>
+</div>
 
 @code {
     private bool isInitialized = false;
     private bool isDisposed = false;
+    private bool showUserMenu = false;
+    private int pendingUpdates = 3; // Example count, replace with real data
     [Parameter] public ApplicationUserDto? User { get; set; }
     private ApplicationUserDto? currentUser;
 
@@ -431,56 +573,52 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (isDisposed) return;
+        
         try
         {
             currentUser = User;
-
-            // Subscribe to authentication state changes
-            AuthenticationService.AuthenticationStateChanged += OnAuthenticationStateChanged;
-
+            await InitializeAsync();
+            
+            // Check for updates or notifications
+            await CheckForUpdates();
+            
             isInitialized = true;
-            await base.OnInitializedAsync();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error initializing NavMenu");
-            isInitialized = true; // Still render the component even if there's an error
-            StateHasChanged();
+            isInitialized = true; // Still set to true to render the error state
+        }
+    }
+    
+    private async Task CheckForUpdates()
+    {
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                currentUser = await AuthenticationService.GetCurrentUserAsync();
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error checking for updates");
         }
     }
 
-    private void OnAuthenticationStateChanged()
+    private async void OnAuthenticationStateChanged(Task<ApplicationUserDto> userTask)
     {
-        // Update current user when authentication state changes
-        InvokeAsync(async () =>
+        try
         {
-            currentUser = await AuthenticationService.GetCurrentUserAsync();
-            StateHasChanged();
-        });
-    }
-
-    private bool IsActive(string href)
-    {
-        var currentUrl = new Uri(Navigation.Uri).AbsolutePath;
-        if (href == "/" && currentUrl == "/") return true;
-        if (href == "/products/search" && currentUrl.StartsWith("/products/search")) return true;
-        return currentUrl == href;
-    }
-
-    private void NavigateToHome() => Navigation.NavigateTo("/");
-    private void NavigateToProducts() => Navigation.NavigateTo("/products");
-    private void NavigateToCategories() => Navigation.NavigateTo("/categories");
-    private void NavigateToSearch() => Navigation.NavigateTo("/products/search");
-    private void NavigateToUserManagement() => Navigation.NavigateTo("/admin/users");
-    private void NavigateToAuditLogs() => Navigation.NavigateTo("/admin/audit");
-    private void NavigateToReports() => Navigation.NavigateTo("/admin/reports");
-    private void NavigateToAccountSettings() => Navigation.NavigateTo("/account/settings");
-    private void NavigateToProfile() => Navigation.NavigateTo("/account/profile");
-
-    private async Task HandleLogout()
-    {
-        await AuthenticationService.LogoutAsync();
-        Navigation.NavigateTo("/auth/login", forceLoad: true);
+            currentUser = await userTask;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error handling authentication state change");
+        }
     }
 
     public void Dispose()
