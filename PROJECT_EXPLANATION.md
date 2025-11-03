@@ -1,6 +1,6 @@
 # Project Overview
 
-BlazorCrudDemo is a comprehensive enterprise-level web application built with Blazor Server that demonstrates advanced CRUD operations, user authentication, authorization, audit logging, and real-time features. This project serves as an excellent learning resource and production-ready starting point for developers interested in building modern, feature-rich web applications using Microsoft's Blazor framework.
+BlazorCrudDemo is a comprehensive enterprise-level web application built with Blazor Server that demonstrates advanced CRUD operations, user authentication, authorization, audit logging, and real-time features. This project serves as an excellent learning resource and production-ready starting point for developers interested in building modern, feature-rich web applications using Microsoft's Blazor framework. I did it for learning purposes.
 
 ## Key Features
 
