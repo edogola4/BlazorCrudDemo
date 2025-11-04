@@ -3,22 +3,22 @@ html, body {
 }
 
 a, .btn-link {
-    color: #1e3a8a;
+    color: var(--primary, #059669);
 }
 
 .btn-primary {
     color: #fff;
-    background-color: #1e3a8a;
-    border-color: #1e3a8a;
+    background-color: var(--primary, #059669);
+    border-color: var(--primary, #059669);
 }
 
 .btn-primary:hover {
-    background-color: #1d4ed8;
-    border-color: #1d4ed8;
+    background-color: var(--primary-hover, #047857);
+    border-color: var(--primary-hover, #047857);
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem rgba(30, 58, 138, 0.25);
+  box-shadow: 0 0 0 0.1rem rgba(5, 150, 105, 0.25);
 }
 
 .content {
@@ -30,19 +30,19 @@ h1:focus {
 }
 
 .valid.modified:not([type=checkbox]) {
-    outline: 1px solid #059669;
+    outline: 1px solid var(--success, #059669);
 }
 
 .invalid {
-    outline: 1px solid #dc2626;
+    outline: 1px solid var(--error, #DC2626);
 }
 
 .validation-message {
-    color: #dc2626;
+    color: var(--error, #DC2626);
 }
 
 .blazor-error-boundary {
-    background: #dc2626;
+    background: var(--error, #DC2626);
     padding: 1rem;
     color: white;
 }
@@ -52,5 +52,5 @@ h1:focus {
     }
 
 .darker-border-checkbox.form-check-input {
-    border-color: #64748b;
+    border-color: var(--border-color, #E5E5E5);
 }
