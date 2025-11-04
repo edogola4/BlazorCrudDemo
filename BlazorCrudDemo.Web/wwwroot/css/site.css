@@ -47,7 +47,7 @@
 }
 
 .path {
-    stroke: #3b82f6;
+    stroke: var(--primary, #059669);
     stroke-linecap: round;
     animation: dash 1.5s ease-in-out infinite;
 }
@@ -70,7 +70,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #3b82f6;
+    background: var(--primary, #059669);
     animation: dots 1.4s ease-in-out infinite both;
 }
 
@@ -98,7 +98,7 @@
 
 .progress-fill {
     height: 100%;
-    background: #3b82f6;
+    background: var(--primary, #059669);
     transition: width 0.3s ease;
     border-radius: 4px;
 }
@@ -179,8 +179,8 @@
 }
 
 .search-input-wrapper:focus-within {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--primary, #059669);
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
 }
 
 .search-input-wrapper:disabled {
@@ -368,9 +368,9 @@
 }
 
 .pagination-btn.active {
-    background: #3b82f6;
+    background: var(--primary, #059669);
     color: white;
-    border-color: #3b82f6;
+    border-color: var(--primary, #059669);
 }
 
 .pagination-prev,
@@ -689,7 +689,7 @@
 }
 
 .confirm-dialog-icon.info {
-    color: #2563eb;
+    color: var(--info, #525252);
 }
 
 .confirm-dialog-title {
@@ -738,12 +738,12 @@
 }
 
 .btn-primary {
-    background: #3b82f6;
+    background: var(--primary, #059669);
     color: white;
 }
 
 .btn-primary:hover {
-    background: #2563eb;
+    background: var(--primary-hover, #047857);
 }
 
 .btn-primary.danger {
@@ -763,11 +763,11 @@
 }
 
 .btn-primary.info {
-    background: #2563eb;
+    background: var(--info, #525252);
 }
 
 .btn-primary.info:hover {
-    background: #1d4ed8;
+    background: var(--text-secondary, #525252);
 }
 
 /* EmptyState Component Styles */
