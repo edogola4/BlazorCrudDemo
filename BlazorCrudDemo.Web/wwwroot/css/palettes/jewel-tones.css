@@ -1,0 +1,67 @@
+/**
+ * SOPHISTICATED JEWEL TONES PALETTE
+ * Forest Green & Burgundy - Rich, confident luxury
+ * Inspired by: Stripe Dashboard, high-end finance tools
+ */
+
+:root {
+    /* === PRIMARY BACKGROUNDS === */
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #F9FAFB;
+    --bg-tertiary: #F3F4F6;
+    
+    /* === SIDEBAR & DARK SURFACES === */
+    --sidebar-bg: #064E3B;
+    --sidebar-hover: #065F46;
+    --sidebar-active: #047857;
+    --sidebar-border: #10B981;
+    
+    /* === PRIMARY ACCENT (Burgundy/Wine) === */
+    --primary: #9F1239;
+    --primary-hover: #881337;
+    --primary-light: #FFE4E6;
+    --primary-dark: #4C0519;
+    
+    /* === TYPOGRAPHY === */
+    --text-primary: #111827;
+    --text-secondary: #4B5563;
+    --text-tertiary: #9CA3AF;
+    --text-on-dark: #F9FAFB;
+    
+    /* === SEMANTIC COLORS === */
+    --success: #047857;
+    --success-bg: #ECFDF5;
+    --warning: #B45309;
+    --warning-bg: #FFFBEB;
+    --error: #DC2626;
+    --error-bg: #FEF2F2;
+    --info: #1F2937;
+    --info-bg: #F3F4F6;
+    
+    /* === ACCENT COLORS (Gold highlights) === */
+    --accent-gold: #D97706;
+    --accent-gold-light: #FEF3C7;
+    
+    /* === UI ELEMENTS === */
+    --border-color: #E5E7EB;
+    --border-hover: #D1D5DB;
+    --divider: #F3F4F6;
+    
+    /* === SHADOWS === */
+    --shadow-sm: 0 1px 2px 0 rgba(6, 78, 59, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(6, 78, 59, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(6, 78, 59, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(6, 78, 59, 0.15);
+    
+    /* === LEGACY COMPATIBILITY === */
+    --primary-50: #FFE4E6;
+    --primary-100: #FECDD3;
+    --primary-200: #FECDD3;
+    --primary-300: #FDA4AF;
+    --primary-400: #FB7185;
+    --primary-500: #F43F5E;
+    --primary-600: #E11D48;
+    --primary-700: #BE123C;
+    --primary-800: #9F1239;
+    --primary-900: #881337;
+}

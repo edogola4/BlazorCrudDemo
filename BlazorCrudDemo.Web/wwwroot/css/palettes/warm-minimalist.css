@@ -1,0 +1,63 @@
+/**
+ * WARM MINIMALIST PALETTE
+ * Charcoal & Bronze - Professional warmth with sophisticated restraint
+ * Inspired by: Bloomberg Terminal, premium financial software
+ */
+
+:root {
+    /* === PRIMARY BACKGROUNDS === */
+    --bg-primary: #FFFFFF;
+    --bg-secondary: #FAFAF9;
+    --bg-tertiary: #F5F5F4;
+    
+    /* === SIDEBAR & DARK SURFACES === */
+    --sidebar-bg: #1C1917;
+    --sidebar-hover: #292524;
+    --sidebar-active: #44403C;
+    --sidebar-border: #3F3A37;
+    
+    /* === PRIMARY ACCENT (Bronze/Amber) === */
+    --primary: #D97706;
+    --primary-hover: #B45309;
+    --primary-light: #FEF3C7;
+    --primary-dark: #92400E;
+    
+    /* === TYPOGRAPHY === */
+    --text-primary: #1C1917;
+    --text-secondary: #57534E;
+    --text-tertiary: #A8A29E;
+    --text-on-dark: #FAFAF9;
+    
+    /* === SEMANTIC COLORS === */
+    --success: #15803D;
+    --success-bg: #F0FDF4;
+    --warning: #EA580C;
+    --warning-bg: #FFF7ED;
+    --error: #B91C1C;
+    --error-bg: #FEF2F2;
+    --info: #78716C;
+    --info-bg: #F5F5F4;
+    
+    /* === UI ELEMENTS === */
+    --border-color: #E7E5E4;
+    --border-hover: #D6D3D1;
+    --divider: #F5F5F4;
+    
+    /* === SHADOWS === */
+    --shadow-sm: 0 1px 2px 0 rgba(28, 25, 23, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(28, 25, 23, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(28, 25, 23, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(28, 25, 23, 0.15);
+    
+    /* === LEGACY COMPATIBILITY === */
+    --primary-50: #FEF3C7;
+    --primary-100: #FDE68A;
+    --primary-200: #FCD34D;
+    --primary-300: #FBBF24;
+    --primary-400: #F59E0B;
+    --primary-500: #D97706;
+    --primary-600: #B45309;
+    --primary-700: #92400E;
+    --primary-800: #78350F;
+    --primary-900: #451A03;
+}
