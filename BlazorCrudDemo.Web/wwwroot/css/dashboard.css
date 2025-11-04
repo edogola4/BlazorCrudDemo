@@ -14,34 +14,34 @@
 
 /* Primary Brand Colors */
 :root {
-    /* Main slate background - Use for sidebar, dark surfaces, modern aesthetics */
-    --sidebar-bg: #0f172a;           /* Deep slate */
-    --sidebar-hover: #1e293b;        /* Slate 800 */
-    --sidebar-active: #334155;       /* Slate 700 */
+    /* Main background - True black for modern monochrome */
+    --sidebar-bg: #0A0A0A;           /* True black */
+    --sidebar-hover: #1A1A1A;        /* Dark gray */
+    --sidebar-active: #2A2A2A;       /* Medium dark gray */
 
-    /* Primary Actions & Accents */
-    --primary: #1e3a8a;              /* Navy 800 */
-    --primary-hover: #1d4ed8;        /* Navy 700 */
-    --primary-light: #e0e7ff;        /* Navy 100 */
+    /* Primary Actions & Accents - Strategic Emerald */
+    --primary: #059669;              /* Emerald 600 */
+    --primary-hover: #047857;        /* Emerald 700 */
+    --primary-light: #D1FAE5;        /* Emerald 100 */
 
     /* Semantic Colors - Status indicators and feedback */
-    --success: #059669;              /* Emerald 600 */
-    --warning: #d97706;              /* Amber 600 */
-    --danger: #dc2626;               /* Red 600 */
-    --info: #475569;                 /* Slate 600 */
+    --success: #059669;              /* Emerald 600 - unified with primary */
+    --warning: #F59E0B;              /* Amber 500 - bright warning */
+    --danger: #DC2626;               /* Red 600 */
+    --info: #525252;                 /* Neutral 600 - grayscale */
 
     /* Neutral Background System */
-    --bg-primary: #ffffff;           /* Pure white - main card backgrounds, surfaces */
-    --bg-secondary: #f8fafc;         /* Light cool gray - section backgrounds, subtle contrast */
-    --bg-tertiary: #f1f5f9;          /* Lighter cool gray - hover states, secondary surfaces */
+    --bg-primary: #FFFFFF;           /* Pure white - main card backgrounds, surfaces */
+    --bg-secondary: #FAFAFA;         /* Neutral off-white - section backgrounds */
+    --bg-tertiary: #F5F5F5;          /* Light neutral gray - hover states */
 
     /* Typography Scale */
-    --text-primary: #0f172a;         /* Near black - headings, primary text (21:1 contrast) */
-    --text-secondary: #475569;        /* Medium gray - body text, secondary info (7.4:1 contrast) */
-    --text-tertiary: #94a3b8;         /* Light gray - muted text, metadata (4.1:1 contrast) */
+    --text-primary: #0A0A0A;         /* True black - headings (21:1 contrast) */
+    --text-secondary: #525252;        /* Neutral 600 - body text (7.9:1 contrast) */
+    --text-tertiary: #A3A3A3;         /* Neutral 400 - muted text (4.5:1 contrast) */
 
     /* UI Elements */
-    --border-color: #e2e8f0;         /* Light gray - borders, dividers, subtle separation */
+    --border-color: #E5E5E5;         /* Neutral border - subtle separation */
 
     /* Shadow System */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
