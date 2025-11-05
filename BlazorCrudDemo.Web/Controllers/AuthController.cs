@@ -2,11 +2,15 @@ using Microsoft.AspNetCore.Mvc;
 using BlazorCrudDemo.Web.Services;
 using BlazorCrudDemo.Shared.DTOs;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace BlazorCrudDemo.Web.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class AuthController : ControllerBase
     {
         private readonly IAuthenticationService _authService;
@@ -19,6 +23,7 @@ namespace BlazorCrudDemo.Web.Controllers
         }
 
         [HttpPost("login")]
+        [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
             try
@@ -57,6 +62,7 @@ namespace BlazorCrudDemo.Web.Controllers
         }
 
         [HttpPost("register")]
+        [AllowAnonymous]
         public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
         {
             try
@@ -196,6 +202,25 @@ namespace BlazorCrudDemo.Web.Controllers
                 success = true,
                 message = "JWT authentication is working!",
                 timestamp = DateTime.UtcNow
+            });
+        }
+
+        [HttpGet("test-auth")]
+        [Authorize]
+        public IActionResult TestAuth()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+            var roles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList();
+
+            return Ok(new
+            {
+                success = true,
+                message = "You are authenticated!",
+                userId,
+                userEmail,
+                roles,
+                claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList()
             });
         }
     }

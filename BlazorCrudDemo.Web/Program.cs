@@ -55,6 +55,9 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddControllers();
 
+// Add cascading authentication state for Blazor Server
+builder.Services.AddCascadingAuthenticationState();
+
 // Configure Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
@@ -77,14 +80,16 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-// Configure cookie authentication
+// Configure cookie authentication for web UI
 builder.Services.ConfigureApplicationCookie(options =>
 {
-    options.LoginPath = "/Account/Login";
-    options.LogoutPath = "/Account/Logout";
-    options.AccessDeniedPath = "/Account/AccessDenied";
+    options.LoginPath = "/auth/login";
+    options.LogoutPath = "/auth/logout";
+    options.AccessDeniedPath = "/auth/access-denied";
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
+        ? CookieSecurePolicy.SameAsRequest 
+        : CookieSecurePolicy.Always;
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.ExpireTimeSpan = TimeSpan.FromHours(2);
     options.SlidingExpiration = true;
@@ -104,30 +109,20 @@ builder.Services.ConfigureApplicationCookie(options =>
 // .AddProfileService<ProfileService>();
 
 // Configure JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "YourSuperSecretKeyThatIsAtLeast32CharactersLong!";
+var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "https://localhost:5120";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "https://localhost:5120";
+var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
 
+// Configure JWT Bearer authentication
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-})
-.AddCookie(options =>
-{
-    options.LoginPath = "/Account/Login";
-    options.LogoutPath = "/Account/Logout";
-    options.AccessDeniedPath = "/Account/AccessDenied";
-    options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-    options.Cookie.SameSite = SameSiteMode.Lax;
-    options.ExpireTimeSpan = TimeSpan.FromHours(2);
-    options.SlidingExpiration = true;
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
 })
 .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
 {
-    options.Authority = jwtIssuer;
-    options.RequireHttpsMetadata = false;
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -383,11 +378,11 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Configure SignalR hub
-app.MapHub<NotificationHub>("/notificationHub");
-
+// Map controllers and endpoints
 app.MapControllers();
+app.MapRazorPages();
 app.MapBlazorHub();
+app.MapHub<NotificationHub>("/notificationHub");
 app.MapFallbackToPage("/_Host");
 
 // Ensure database is migrated and created

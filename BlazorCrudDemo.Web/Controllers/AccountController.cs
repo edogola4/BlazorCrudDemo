@@ -30,8 +30,12 @@ namespace BlazorCrudDemo.Web.Controllers
         [HttpGet("Login")]
         public IActionResult Login(string? returnUrl = null)
         {
-            ViewData["ReturnUrl"] = returnUrl;
-            return View();
+            // Redirect to Blazor login page
+            if (!string.IsNullOrWhiteSpace(returnUrl))
+            {
+                return Redirect($"/auth/login?returnUrl={Uri.EscapeDataString(returnUrl)}");
+            }
+            return Redirect("/auth/login");
         }
 
         [HttpPost("Login")]
