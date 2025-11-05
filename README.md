@@ -12,14 +12,17 @@ A comprehensive Blazor Server application demonstrating enterprise-level CRUD op
 ## Features
 
 ### 🔐 Authentication & Authorization
-- **JWT Authentication**: Secure token-based authentication
+- **Hybrid Authentication**: Cookie-based (Blazor Server) + JWT (API endpoints)
 - **User Registration & Login**: Complete authentication system with email/password
 - **Password Recovery**: Forgot password functionality with email reset
 - **User Management**: Admin panel for user administration
-- **Role-Based Access Control (RBAC)**: Fine-grained permissions system
+- **Role-Based Access Control (RBAC)**: Admin and User roles with policy-based authorization
 - **Profile Management**: User profile editing and settings
-- **Token Refresh**: Secure token refresh mechanism
-- **Claims-based Authorization**: Fine-grained access control
+- **Token Refresh**: Secure refresh token mechanism with automatic renewal
+- **Account Security**: Account lockout protection, password hashing (PBKDF2)
+- **Audit Logging**: Complete tracking of all authentication events
+
+📖 **[Complete Authentication Documentation](AUTHENTICATION_README.md)** | **[Testing Guide](AUTHENTICATION_TESTING.md)**
 
 ### 📊 Dashboard
 - **Real-time Statistics**: Live metrics and data visualization
