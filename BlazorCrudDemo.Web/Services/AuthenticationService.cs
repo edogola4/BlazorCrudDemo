@@ -9,9 +9,15 @@ using BlazorCrudDemo.Web.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using BlazorCrudDemo.Shared.DTOs;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace BlazorCrudDemo.Web.Services
 {
+    /// <summary>
+    /// Implementation of authentication service that handles user authentication,
+    /// JWT token generation, session management, and audit logging.
+    /// Integrates with ASP.NET Core Identity for user management.
+    /// </summary>
     public class AuthenticationService : IAuthenticationService
     {
         private readonly UserManager<ApplicationUser> _userManager;
@@ -20,10 +26,19 @@ namespace BlazorCrudDemo.Web.Services
         private readonly ILogger<AuthenticationService> _logger;
         private readonly IAuditService _auditService;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly AuthenticationStateProvider _authenticationStateProvider;
         
-        // Implement the AuthenticationStateChanged event
+        /// <summary>
+        /// Event that fires when authentication state changes (login/logout).
+        /// Components can subscribe to this to update UI when auth state changes.
+        /// </summary>
         public event Action? AuthenticationStateChanged;
 
+        /// <summary>
+        /// Extracts the User-Agent header from the current HTTP request.
+        /// Used for audit logging to track which browsers/devices are accessing the system.
+        /// </summary>
+        /// <returns>User-Agent string or "Unknown" if not available</returns>
         private string GetUserAgent()
         {
             return _httpContextAccessor?.HttpContext?.Request?.Headers["User-Agent"].ToString() ?? "Unknown";
@@ -35,6 +50,7 @@ namespace BlazorCrudDemo.Web.Services
             IConfiguration configuration,
             ILogger<AuthenticationService> logger,
             IAuditService auditService,
+            AuthenticationStateProvider authenticationStateProvider,
             IHttpContextAccessor httpContextAccessor)
         {
             _userManager = userManager;
@@ -43,6 +59,7 @@ namespace BlazorCrudDemo.Web.Services
             _logger = logger;
             _auditService = auditService;
             _httpContextAccessor = httpContextAccessor;
+            _authenticationStateProvider = authenticationStateProvider;
         }
 
         public async Task<AuthResult> LoginAsync(LoginDto loginDto)
@@ -77,59 +94,22 @@ namespace BlazorCrudDemo.Web.Services
                     };
                 }
 
-                // First check the password
-                var result = await _signInManager.CheckPasswordSignInAsync(
-                    user,
-                    loginDto.Password,
-                    lockoutOnFailure: true);
-
-                if (result.Succeeded)
+                // Verify password without signing in (to avoid cookie issues in Blazor Server)
+                var isPasswordValid = await _userManager.CheckPasswordAsync(user, loginDto.Password);
+                
+                if (!isPasswordValid)
                 {
-                    // Generate claims for the user (but don't sign in yet - we'll do this separately)
-                    var claims = new List<Claim>
-                    {
-                        new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-                        new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                        new Claim("name", $"{user.FirstName} {user.LastName}".Trim()),
-                        new Claim("first_name", user.FirstName ?? ""),
-                        new Claim("last_name", user.LastName ?? "")
-                    };
-
-                    // Add role claims
-                    var roles = await _userManager.GetRolesAsync(user);
-                    foreach (var role in roles)
-                    {
-                        claims.Add(new Claim(ClaimTypes.Role, role));
-                    }
-
-                    await _auditService.LogLoginAsync(user.Id, GetClientIpAddress(), GetUserAgent(), true);
-
-                    var token = await GenerateJwtTokenAsync(user);
-                    var refreshToken = GenerateRefreshToken();
-
-                    user.LastLoginDate = DateTime.UtcNow;
-                    await _userManager.UpdateAsync(user);
-
-                    // Store refresh token
-                    await _userManager.SetAuthenticationTokenAsync(user, "BlazorCrudDemo", "RefreshToken", refreshToken);
-
-                    // Notify subscribers of authentication state change
-                    NotifyAuthenticationStateChanged();
-
+                    await _auditService.LogLoginAsync(user.Id, GetClientIpAddress(), GetUserAgent(), false, "Sign in failed - Invalid password");
                     return new AuthResult
                     {
-                        Success = true,
-                        Message = "Login successful",
-                        AccessToken = token,
-                        RefreshToken = refreshToken,
-                        ExpiresAt = DateTime.UtcNow.AddHours(1),
-                        User = await MapToUserDtoAsync(user),
-                        RequiresSignIn = true // Flag to indicate sign-in needs to be completed separately
+                        Success = false,
+                        Message = "Invalid login attempt",
+                        Errors = new List<string> { "Invalid username or password" }
                     };
                 }
-
-                if (result.IsLockedOut)
+                
+                // Check if account is locked out
+                if (await _userManager.IsLockedOutAsync(user))
                 {
                     await _auditService.LogLoginAsync(user.Id, GetClientIpAddress(), GetUserAgent(), false, "Account locked out");
                     return new AuthResult
@@ -140,12 +120,57 @@ namespace BlazorCrudDemo.Web.Services
                     };
                 }
 
-                await _auditService.LogLoginAsync(user.Id, GetClientIpAddress(), GetUserAgent(), false, "Invalid password");
+                // Get user roles and add them as claims
+                var roles = await _userManager.GetRolesAsync(user);
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, user.Id),
+                    new Claim(ClaimTypes.Email, user.Email),
+                    new Claim(ClaimTypes.Name, user.UserName),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                };
+
+                // Add role claims
+                foreach (var role in roles)
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, role));
+                }
+
+                await _auditService.LogLoginAsync(user.Id, GetClientIpAddress(), GetUserAgent(), true, "Login successful");
+
+                var token = await GenerateJwtTokenAsync(user);
+                var refreshToken = GenerateRefreshToken();
+
+                user.LastLoginDate = DateTime.UtcNow;
+                await _userManager.UpdateAsync(user);
+
+                // Store refresh token
+                await _userManager.SetAuthenticationTokenAsync(user, "BlazorCrudDemo", "RefreshToken", refreshToken);
+
+                // Check if user is locked out
+                if (await _userManager.IsLockedOutAsync(user))
+                {
+                    await _auditService.LogLoginAsync(user.Id, GetClientIpAddress(), GetUserAgent(), false, "Account locked out");
+                    return new AuthResult
+                    {
+                        Success = false,
+                        Message = "Account is locked out due to too many failed attempts",
+                        Errors = new List<string> { "Account locked out" }
+                    };
+                }
+
+                // Notify subscribers of authentication state change
+                NotifyAuthenticationStateChanged();
+
                 return new AuthResult
                 {
-                    Success = false,
-                    Message = "Invalid email or password",
-                    Errors = new List<string> { "Invalid email or password" }
+                    Success = true,
+                    Message = "Login successful",
+                    AccessToken = token,
+                    RefreshToken = refreshToken,
+                    ExpiresAt = DateTime.UtcNow.AddHours(1),
+                    User = await MapToUserDtoAsync(user),
+                    RequiresSignIn = true // Flag to indicate sign-in needs to be completed separately
                 };
             }
             catch (Exception ex)
@@ -482,6 +507,13 @@ namespace BlazorCrudDemo.Web.Services
             }
         }
 
+        /// <summary>
+        /// Generates a JWT access token for the specified user.
+        /// Token includes user ID, email, name, and roles as claims.
+        /// Token is signed with HMAC-SHA256 and expires in 1 hour.
+        /// </summary>
+        /// <param name="user">The user to generate a token for</param>
+        /// <returns>JWT token string</returns>
         private async Task<string> GenerateJwtTokenAsync(ApplicationUser user)
         {
             var claims = new List<Claim>
@@ -516,6 +548,11 @@ namespace BlazorCrudDemo.Web.Services
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
+        /// <summary>
+        /// Generates a cryptographically secure random refresh token.
+        /// Refresh tokens are used to obtain new access tokens without re-authentication.
+        /// </summary>
+        /// <returns>Base64-encoded random token string</returns>
         private string GenerateRefreshToken()
         {
             var randomNumber = new byte[32];
@@ -524,6 +561,12 @@ namespace BlazorCrudDemo.Web.Services
             return Convert.ToBase64String(randomNumber);
         }
 
+        /// <summary>
+        /// Maps an ApplicationUser entity to an ApplicationUserDto for API responses.
+        /// Includes user roles in the DTO.
+        /// </summary>
+        /// <param name="user">The user entity to map</param>
+        /// <returns>User DTO with roles populated</returns>
         private async Task<ApplicationUserDto> MapToUserDtoAsync(ApplicationUser user)
         {
             var roles = await _userManager.GetRolesAsync(user);
@@ -542,11 +585,20 @@ namespace BlazorCrudDemo.Web.Services
             };
         }
 
+        /// <summary>
+        /// Retrieves the client's IP address from the current HTTP context.
+        /// Used for audit logging and security tracking.
+        /// </summary>
+        /// <returns>IP address string or "unknown" if not available</returns>
         private string GetClientIpAddress()
         {
             return _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
         }
 
+        /// <summary>
+        /// Notifies all subscribers that the authentication state has changed.
+        /// This triggers UI updates in components that depend on auth state.
+        /// </summary>
         private void NotifyAuthenticationStateChanged()
         {
             AuthenticationStateChanged?.Invoke();
