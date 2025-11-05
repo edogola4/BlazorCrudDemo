@@ -1,9 +1,14 @@
 @page "/auth/login"
 @using System
+@using System.Security.Claims
+@using System.Collections.Generic
 @using Microsoft.AspNetCore.WebUtilities
 @using BlazorCrudDemo.Web.Services
+@using BlazorCrudDemo.Shared.DTOs
+@using BlazorCrudDemo.Shared.Models
 @inject NavigationManager Navigation
 @inject IAuthenticationService AuthenticationService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Login</PageTitle>
 
@@ -21,19 +26,19 @@
                         </div>
                     }
 
-                    <form method="post" action="/Account/Login">
+                    <form @onsubmit="HandleLoginAsync">
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" name="email" required>
+                            <input type="email" class="form-control" id="email" @bind="email" required>
                         </div>
 
                         <div class="mb-3">
                             <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="password" name="password" required>
+                            <input type="password" class="form-control" id="password" @bind="password" required>
                         </div>
 
                         <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="rememberMe" name="rememberMe">
+                            <input type="checkbox" class="form-check-input" id="rememberMe" @bind="rememberMe">
                             <label class="form-check-label" for="rememberMe">Remember me</label>
                         </div>
 
@@ -57,6 +62,9 @@
     private string errorMessage = "";
     private bool isLoading = false;
     private string returnUrl = "";
+    private string email = string.Empty;
+    private string password = string.Empty;
+    private bool rememberMe = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -73,4 +81,80 @@
         var queryParams = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
         returnUrl = queryParams.FirstOrDefault(p => p.Key == "returnUrl").Value.ToString() ?? "";
     }
+
+    // AuthenticationStateProvider is now injected at the top
+
+    private async Task HandleLoginAsync()
+    {
+        try
+        {
+            errorMessage = string.Empty;
+            isLoading = true;
+
+            var dto = new LoginDto
+            {
+                Email = email,
+                Password = password,
+                RememberMe = rememberMe
+            };
+
+            var result = await AuthenticationService.LoginAsync(dto);
+
+            if (result.Success)
+            {
+                // Notify the authentication state provider that the user is authenticated
+                if (AuthenticationStateProvider is CustomAuthenticationStateProvider customAuthProvider)
+                {
+                    var user = await AuthenticationService.GetCurrentUserAsync();
+                    if (user != null)
+                    {
+                                    var claims = new List<Claim>
+                        {
+                            new Claim(ClaimTypes.Name, user.Email ?? string.Empty),
+                            new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
+                            new Claim(ClaimTypes.NameIdentifier, user.Id ?? string.Empty)
+                        };
+                        
+                        // Add roles as individual claims
+                        if (user.Roles != null)
+                        {
+                            foreach (var role in user.Roles)
+                            {
+                                claims.Add(new Claim(ClaimTypes.Role, role));
+                            }
+                        }
+                        
+                        var identity = new ClaimsIdentity(claims, "apiauth");
+                        
+                        var principal = new ClaimsPrincipal(identity);
+                        customAuthProvider.MarkUserAsAuthenticated(principal);
+                        
+                        // Add a small delay to ensure the auth state is updated
+                        await Task.Delay(100);
+                        
+                        // Navigate to the target page with force load to ensure all components re-render
+                        var target = string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl;
+                        Navigation.NavigateTo(target, true);
+                        return;
+                    }
+                }
+                
+                // Fallback to default navigation if something goes wrong
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                errorMessage = string.IsNullOrWhiteSpace(result.Message) ? "Invalid email or password." : result.Message;
+            }
+        }
+        catch (Exception)
+        {
+            errorMessage = "An unexpected error occurred while attempting to log in.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
 }
+
