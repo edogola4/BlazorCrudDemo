@@ -39,6 +39,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <PublishAot>false</PublishAot>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <UseAppHost>false</UseAppHost>
   </PropertyGroup>
 
 </Project>
