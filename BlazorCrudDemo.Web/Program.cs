@@ -18,6 +18,7 @@ using BlazorCrudDemo.Web.Mapping;
 using BlazorCrudDemo.Web.Configuration;
 using BlazorCrudDemo.Data.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.SignalR;
 using Blazored.Toast;
@@ -83,17 +84,71 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 // Configure cookie authentication for web UI
 builder.Services.ConfigureApplicationCookie(options =>
 {
+    options.Cookie.Name = ".AspNetCore.Identity.Application";
+    options.Cookie.HttpOnly = true;
+    options.ExpireTimeSpan = TimeSpan.FromHours(2);
+    options.SlidingExpiration = true;
     options.LoginPath = "/auth/login";
     options.LogoutPath = "/auth/logout";
     options.AccessDeniedPath = "/auth/access-denied";
-    options.Cookie.HttpOnly = true;
+    options.ReturnUrlParameter = "returnUrl";
     options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
         ? CookieSecurePolicy.SameAsRequest 
         : CookieSecurePolicy.Always;
     options.Cookie.SameSite = SameSiteMode.Lax;
-    options.ExpireTimeSpan = TimeSpan.FromHours(2);
-    options.SlidingExpiration = true;
+    options.Events = new CookieAuthenticationEvents
+    {
+        OnRedirectToLogin = context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
+        },
+        OnRedirectToAccessDenied = context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        },
+        OnValidatePrincipal = SecurityStampValidator.ValidatePrincipalAsync
+    };
 });
+
+// Configure authentication to use cookies for Blazor Server
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+    {
+        options.Cookie.Name = ".AspNetCore.Identity.Application";
+        options.LoginPath = "/auth/login";
+        options.LogoutPath = "/auth/logout";
+        options.AccessDeniedPath = "/auth/access-denied";
+        options.ReturnUrlParameter = "returnUrl";
+        options.ExpireTimeSpan = TimeSpan.FromHours(2);
+        options.SlidingExpiration = true;
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
+            ? CookieSecurePolicy.SameAsRequest 
+            : CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Events = new CookieAuthenticationEvents
+        {
+            OnRedirectToLogin = context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            },
+            OnRedirectToAccessDenied = context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return Task.CompletedTask;
+            },
+            OnValidatePrincipal = SecurityStampValidator.ValidatePrincipalAsync
+        };
+    });
+
+// Register CustomAuthenticationStateProvider as the implementation for AuthenticationStateProvider
+builder.Services.AddScoped<AuthenticationStateProvider>(provider => 
+    provider.GetRequiredService<CustomAuthenticationStateProvider>());
+
+// Explicitly register CustomAuthenticationStateProvider
+builder.Services.AddScoped<CustomAuthenticationStateProvider>();
 // builder.Services.AddIdentityServer(options =>
 // {
 //     options.IssuerUri = "https://localhost:5001";
@@ -311,8 +366,41 @@ builder.Services.AddHostedService<MaintenanceBackgroundService>();
 builder.Services.AddHostedService<CacheCleanupBackgroundService>();
 builder.Services.AddHostedService<DataSyncBackgroundService>();
 
-// Register SignalR
-builder.Services.AddSignalR();
+// Register SignalR with enhanced configuration
+builder.Services.AddSignalR(hubOptions => 
+{
+    // Enable detailed error messages in development
+    hubOptions.EnableDetailedErrors = builder.Environment.IsDevelopment();
+    
+    // Configure keep-alive and handshake timeouts
+    hubOptions.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    hubOptions.HandshakeTimeout = TimeSpan.FromSeconds(15);
+    
+    // Configure client timeout and reconnection settings
+    hubOptions.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+    
+    // Enable automatic reconnection
+    hubOptions.MaximumReceiveMessageSize = 32 * 1024; // 32KB
+    
+}).AddHubOptions<NotificationHub>(options =>
+{
+    // Configure notification hub options
+    options.EnableDetailedErrors = true;
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+});
+
+// Configure CORS for SignalR
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins(builder.Configuration["AllowedOrigins"]?.Split(';') ?? Array.Empty<string>())
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
 
 // Add Blazored services
 builder.Services.AddBlazoredToast();
@@ -389,14 +477,24 @@ app.MapFallbackToPage("/_Host");
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-    // Apply any pending migrations
-    dbContext.Database.Migrate();
-
-    // If no migrations exist, ensure the database is created with seed data
-    if (!dbContext.Database.GetAppliedMigrations().Any())
+    try
     {
-        dbContext.Database.EnsureCreated();
+        // Apply any pending migrations
+        logger.LogInformation("Applying database migrations...");
+        dbContext.Database.Migrate();
+
+        // Seed sample data if the database is empty
+        logger.LogInformation("Seeding sample data...");
+        await SampleDataSeeder.SeedAsync(scope.ServiceProvider);
+        
+        logger.LogInformation("Database initialization completed successfully.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while initializing the database.");
+        throw;
     }
 }
 
