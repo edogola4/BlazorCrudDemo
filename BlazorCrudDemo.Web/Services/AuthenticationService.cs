@@ -146,6 +146,23 @@ namespace BlazorCrudDemo.Web.Services
 
                 // Store refresh token
                 await _userManager.SetAuthenticationTokenAsync(user, "BlazorCrudDemo", "RefreshToken", refreshToken);
+                
+                // Sign in the user with the authentication scheme
+                await _signInManager.SignInWithClaimsAsync(user, loginDto.RememberMe, new[]
+                {
+                    new Claim(ClaimTypes.Name, user.UserName),
+                    new Claim(ClaimTypes.Email, user.Email),
+                    new Claim(ClaimTypes.NameIdentifier, user.Id)
+                });
+                
+                // Notify authentication state change
+                var principal = await _signInManager.CreateUserPrincipalAsync(user);
+                if (_authenticationStateProvider is CustomAuthenticationStateProvider customAuthProvider)
+                {
+                    customAuthProvider.MarkUserAsAuthenticated(principal);
+                }
+                
+                NotifyAuthenticationStateChanged();
 
                 // Check if user is locked out
                 if (await _userManager.IsLockedOutAsync(user))
