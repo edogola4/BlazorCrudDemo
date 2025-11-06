@@ -420,8 +420,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
   "user": {
     "id": "user-id-123",
     "email": "user@example.com",
-    "firstName": "John",
-    "lastName": "Doe",
+    "firstName": "Bran",
+    "lastName": "Don",
     "roles": ["User"],
     "isActive": true
   }
