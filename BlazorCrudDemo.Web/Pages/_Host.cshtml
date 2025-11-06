@@ -45,9 +45,189 @@
 <script src="~/js/error-tracking.js" asp-append-version="true" defer></script>
 <script src="~/js/modal-helper.js" asp-append-version="true" defer></script>
 
+<div id="components-reconnect-modal" class="my-reconnect-modal components-reconnect-hide">
+    <div class="show">
+        <p>
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Attempting to connect to the server...
+        </p>
+    </div>
+    <div class="failed">
+        <p>
+            <span class="text-danger">✖</span> Connection to the server failed.
+            <button class="btn btn-primary btn-sm" onclick="window.Blazor.reconnect()">Reconnect</button>
+        </p>
+    </div>
+    <div class="rejected">
+        <p>
+            <span class="text-danger">✖</span> Connection rejected. Refresh the page to try again.
+            <button class="btn btn-primary btn-sm" onclick="window.location.reload()">Refresh</button>
+        </p>
+    </div>
+</div>
+
+<style>
+    .my-reconnect-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+    
+    .my-reconnect-modal > div {
+        padding: 1.5rem;
+        background: #1a1a1a;
+        border-radius: 0.5rem;
+        text-align: center;
+        max-width: 500px;
+        margin: 1rem;
+    }
+    
+    .my-reconnect-modal > div > p {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .components-reconnect-hide > div {
+        display: none;
+    }
+    
+    .components-reconnect-show > div {
+        display: none;
+    }
+    
+    .components-reconnect-show > .show {
+        display: block;
+    }
+    
+    .components-reconnect-failed > div {
+        display: none;
+    }
+    
+    .components-reconnect-failed > .failed {
+        display: block;
+    }
+    
+    .components-reconnect-rejected > div {
+        display: none;
+    }
+    
+    .components-reconnect-rejected > .rejected {
+        display: block;
+    }
+</style>
+
 <script>
     // Initialize Blazor when the page is fully loaded
     document.addEventListener('DOMContentLoaded', function() {
+        // Set up connection state change handlers
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/_blazor")
+            .withAutomaticReconnect({
+                nextRetryDelayInMilliseconds: retryContext => {
+                    // First 10 retries: 1 second
+                    if (retryContext.elapsedMilliseconds < 10000) return 1000;
+                    
+                    // Next 5 retries: 5 seconds
+                    if (retryContext.elapsedMilliseconds < 35000) return 5000;
+                    
+                    // After that: 10 seconds
+                    return 10000;
+                }
+            })
+            .configureLogging(signalR.LogLevel.Warning)
+            .build();
+            
+        // Start the connection
+        startConnection();
+        
+        async function startConnection() {
+            try {
+                await connection.start();
+                console.log('SignalR Connected.');
+            } catch (err) {
+                console.error('SignalR Connection Error: ', err);
+                // Try again in 5 seconds
+                setTimeout(startConnection, 5000);
+            }
+        }
+        
+        // Handle connection state changes
+        connection.onreconnecting(error => {
+            console.warn('SignalR reconnecting...', error);
+            document.body.classList.add('components-reconnect-show');
+        });
+        
+        connection.onreconnected(connectionId => {
+            console.log('SignalR reconnected with ID:', connectionId);
+            document.body.classList.remove('components-reconnect-show');
+        });
+        
+        connection.onclose(error => {
+            console.error('SignalR connection closed:', error);
+            document.body.classList.add('components-reconnect-failed');
+        });
+        // Check if Blazor is already initialized
+        if (window.blazorInitialized) {
+            console.log('Blazor already initialized, skipping...');
+            return;
+        }
+        
+        window.blazorInitialized = true;
+        
+        // Configure Blazor with authentication support
+        Blazor.start({
+            configureSignalR: function (builder) {
+                // Ensure the SignalR connection includes credentials
+                builder.withUrl("/_blazor", { 
+                    accessTokenFactory: () => {
+                        return document.cookie
+                            .split('; ')
+                            .find(row => row.startsWith('.AspNetCore.Identity.Application='))
+                            ?.split('=')[1] || '';
+                    }
+                });
+            },
+            reconnectionOptions: {
+                maxRetries: 5,
+                retryIntervalMilliseconds: 2000,
+                dialogId: 'components-reconnect-modal'
+            },
+            reconnectionHandler: {
+                onConnectionDown: function (options, error) {
+                    console.error('Blazor connection lost. Attempting to reconnect...', error);
+                    // If we get a 401, redirect to login
+                    if (error && error.statusCode === 401) {
+                        window.location.href = '/auth/login?returnUrl=' + encodeURIComponent(window.location.pathname);
+                    }
+                },
+                onConnectionUp: function () {
+                    console.log('Blazor connection re-established.');
+                }
+            },
+            // Enable detailed logging for debugging
+            logLevel: 1, // 1=Error, 2=Warning, 3=Info, 4=Debug
+            // Enable enhanced navigation and form handling
+            enhancedNavigation: true,
+            // Configure authentication
+            authentication: {
+                // This tells Blazor to include the auth token in all fetch requests
+                includeAccessTokenInQuery: false,
+                // This tells Blazor to include the auth token in all XHR requests
+                includeAccessTokenInXHR: true
+            }
+        });
+
         // Check if Blazor is already started - multiple checks for reliability
         if (window.Blazor) {
             // Check 1: If Blazor has active circuits
@@ -126,8 +306,10 @@
             });
             
         } catch (error) {
-            console.error('Error initializing Blazor:', error);
-            handleFatalError(error);
+            if (!error.message || !error.message.includes('Blazor has already started')) {
+                console.error('Error initializing Blazor:', error);
+                handleFatalError(error);
+            }
         }
     });
     
