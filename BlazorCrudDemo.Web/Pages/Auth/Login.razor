@@ -3,12 +3,23 @@
 @using System.Security.Claims
 @using System.Collections.Generic
 @using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
 @using BlazorCrudDemo.Web.Services
 @using BlazorCrudDemo.Shared.DTOs
 @using BlazorCrudDemo.Shared.Models
+@using BlazorCrudDemo.Data.Models
+@using Microsoft.AspNetCore.Http
 @inject NavigationManager Navigation
-@inject IAuthenticationService AuthenticationService
+@inject BlazorCrudDemo.Web.Services.IAuthenticationService AuthenticationService
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IHttpContextAccessor HttpContextAccessor
+@inject ILogger<Login> Logger
 
 <PageTitle>Login</PageTitle>
 
@@ -26,32 +37,41 @@
                         </div>
                     }
 
-                    <form @onsubmit="HandleLoginAsync">
+                    <EditForm Model="@loginModel" OnValidSubmit="HandleValidSubmit" OnInvalidSubmit="HandleInvalidSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" @bind="email" required>
+                            <InputText id="email" @bind-Value="loginModel.Email" class="form-control" />
+                            <ValidationMessage For="@(() => loginModel.Email)" class="text-danger" />
                         </div>
 
                         <div class="mb-3">
                             <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-control" id="password" @bind="password" required>
+                            <InputText id="password" type="password" @bind-Value="loginModel.Password" class="form-control" />
+                            <ValidationMessage For="@(() => loginModel.Password)" class="text-danger" />
                         </div>
 
                         <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="rememberMe" @bind="rememberMe">
+                            <InputCheckbox id="rememberMe" @bind-Value="loginModel.RememberMe" class="form-check-input" />
                             <label class="form-check-label" for="rememberMe">Remember me</label>
                         </div>
 
-                        <input type="hidden" name="returnUrl" value="@returnUrl">
+                        <input type="hidden" name="returnUrl" value="@returnUrl" />
 
-                        <button type="submit" class="btn btn-primary w-100" disabled="@isLoading">
+                        <button type="submit" class="btn btn-primary w-100" disabled="@isLoading" @onclick:preventDefault>
                             @if (isLoading)
                             {
                                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                <span>Logging in...</span>
                             }
-                            Log in
+                            else
+                            {
+                                <span>Log in</span>
+                            }
                         </button>
-                    </form>
+                    </EditForm>
                 </div>
             </div>
         </div>
@@ -62,9 +82,7 @@
     private string errorMessage = "";
     private bool isLoading = false;
     private string returnUrl = "";
-    private string email = string.Empty;
-    private string password = string.Empty;
-    private bool rememberMe = false;
+    private LoginDto loginModel = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -79,82 +97,61 @@
         // Check for return URL parameter
         var uri = new Uri(Navigation.Uri);
         var queryParams = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
-        returnUrl = queryParams.FirstOrDefault(p => p.Key == "returnUrl").Value.ToString() ?? "";
+        var returnUrlParam = queryParams.FirstOrDefault(p => p.Key == "returnUrl").Value;
+        returnUrl = returnUrlParam.Count > 0 ? returnUrlParam.ToString() : "";
     }
 
-    // AuthenticationStateProvider is now injected at the top
-
-    private async Task HandleLoginAsync()
+    private async Task HandleValidSubmit(EditContext context)
     {
+        if (isLoading) return;
+        
         try
         {
-            errorMessage = string.Empty;
             isLoading = true;
-
-            var dto = new LoginDto
+            errorMessage = "";
+            StateHasChanged();
+            
+            // Small delay to show loading state
+            await Task.Delay(100);
+            
+            var loginResult = await AuthenticationService.LoginAsync(loginModel);
+            
+            if (loginResult != null && loginResult.Success)
             {
-                Email = email,
-                Password = password,
-                RememberMe = rememberMe
-            };
-
-            var result = await AuthenticationService.LoginAsync(dto);
-
-            if (result.Success)
-            {
-                // Notify the authentication state provider that the user is authenticated
-                if (AuthenticationStateProvider is CustomAuthenticationStateProvider customAuthProvider)
+                // Force a refresh of the authentication state
+                if (AuthenticationStateProvider is CustomAuthenticationStateProvider authStateProvider)
                 {
-                    var user = await AuthenticationService.GetCurrentUserAsync();
-                    if (user != null)
-                    {
-                                    var claims = new List<Claim>
-                        {
-                            new Claim(ClaimTypes.Name, user.Email ?? string.Empty),
-                            new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
-                            new Claim(ClaimTypes.NameIdentifier, user.Id ?? string.Empty)
-                        };
-                        
-                        // Add roles as individual claims
-                        if (user.Roles != null)
-                        {
-                            foreach (var role in user.Roles)
-                            {
-                                claims.Add(new Claim(ClaimTypes.Role, role));
-                            }
-                        }
-                        
-                        var identity = new ClaimsIdentity(claims, "apiauth");
-                        
-                        var principal = new ClaimsPrincipal(identity);
-                        customAuthProvider.MarkUserAsAuthenticated(principal);
-                        
-                        // Add a small delay to ensure the auth state is updated
-                        await Task.Delay(100);
-                        
-                        // Navigate to the target page with force load to ensure all components re-render
-                        var target = string.IsNullOrWhiteSpace(returnUrl) ? "/" : returnUrl;
-                        Navigation.NavigateTo(target, true);
-                        return;
-                    }
+                    await authStateProvider.RefreshAuthenticationStateAsync();
                 }
                 
-                // Fallback to default navigation if something goes wrong
-                Navigation.NavigateTo("/");
+                // Navigate to the target page with a small delay to ensure state is updated
+                var redirectUrl = string.IsNullOrEmpty(returnUrl) ? "/" : returnUrl;
+                Console.WriteLine($"Login successful, redirecting to: {redirectUrl}");
+                
+                // Force a full page reload to ensure all authentication state is properly loaded
+                Navigation.NavigateTo(redirectUrl, forceLoad: true);
+                return;
             }
             else
             {
-                errorMessage = string.IsNullOrWhiteSpace(result.Message) ? "Invalid email or password." : result.Message;
+                errorMessage = loginResult?.Message ?? "Invalid email or password. Please try again.";
+                loginModel.Password = string.Empty;
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            errorMessage = "An unexpected error occurred while attempting to log in.";
+            errorMessage = "An error occurred during login. Please try again.";
+            Console.WriteLine($"Login error: {ex}");
         }
         finally
         {
             isLoading = false;
+            StateHasChanged();
         }
     }
+    
+    private void HandleInvalidSubmit()
+    {
+        errorMessage = "Please correct the validation errors and try again.";
+    }
 }
-
