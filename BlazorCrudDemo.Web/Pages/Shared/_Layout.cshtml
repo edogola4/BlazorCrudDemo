@@ -1,20 +1,34 @@
 @using Microsoft.AspNetCore.Components.Web
 @namespace BlazorCrudDemo.Web.Pages
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    // Get the nonce from ViewData (set in _Host.cshtml)
+    var nonce = ViewData["CspNonce"] as string;
+    
+    // If not in ViewData, generate a new nonce
+    if (string.IsNullOrEmpty(nonce))
+    {
+        nonce = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16));
+        // Store in ViewData for this request
+        ViewData["CspNonce"] = nonce;
+    }
+}
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; img-src 'self' data: https: blob:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; connect-src 'self' data: ws: wss: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.syncfusion.com; object-src 'none'; base-uri 'self';" />
     <base href="~/" />
-    <link href="css/site.css" rel="stylesheet" />
-    <link href="css/dashboard.css" rel="stylesheet" />
-    <link href="BlazorCrudDemo.Web.styles.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet" />
-    <link href="blazored-toast.min.css" rel="stylesheet" />
+    <link href="css/site.css" rel="stylesheet" nonce="@nonce" />
+    <link href="css/dashboard.css" rel="stylesheet" nonce="@nonce" />
+    <link href="BlazorCrudDemo.Web.styles.css" rel="stylesheet" nonce="@nonce" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" nonce="@nonce" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet" nonce="@nonce" />
+    <link href="blazored-toast.min.css" rel="stylesheet" nonce="@nonce" />
     <component type="typeof(HeadOutlet)" render-mode="ServerPrerendered" />
 </head>
 <body>
@@ -31,13 +45,23 @@
         <a class="dismiss">🗙</a>
     </div>
 
-    <script src="_framework/blazor.server.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="_framework/blazor.server.js" nonce="@nonce" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" nonce="@nonce" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
-    <script src="~/js/products.js"></script>
-    <script src="~/js/confirm-dialog.js"></script>
-    <script src="~/js/layout.js"></script>
-    <script src="~/js/dashboard-charts.js"></script>
-    <script src="~/js/error-tracking.js"></script>
+    <script src="~/js/products.js" nonce="@nonce" defer></script>
+    <script src="~/js/confirm-dialog.js" nonce="@nonce" defer></script>
+    <script src="~/js/layout.js" nonce="@nonce" defer></script>
+    <script src="~/js/dashboard-charts.js" nonce="@nonce" defer></script>
+    <script src="~/js/error-tracking.js" nonce="@nonce" defer></script>
+    <script nonce="@nonce">
+        // Global error handler for unhandled promise rejections
+        window.addEventListener('unhandledrejection', function (event) {
+            console.error('Unhandled promise rejection:', event.reason);
+            // Optionally show a user-friendly error message
+            if (window.showErrorNotification) {
+                window.showErrorNotification('An unexpected error occurred. Please try again.');
+            }
+        });
+    </script>
 </body>
 </html>
