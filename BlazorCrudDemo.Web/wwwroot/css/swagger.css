@@ -1,0 +1,119 @@
+/* Swagger UI Customization */
+
+/* Main container */
+.swagger-ui {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Header */
+.topbar {
+    background-color: #0f172a !important;
+    padding: 10px 0;
+}
+
+/* API title */
+.information-container .title {
+    color: #1e293b !important;
+    font-weight: 600 !important;
+}
+
+/* HTTP methods */
+.opblock.opblock-get .opblock-summary-method {
+    background: #3b82f6 !important;
+}
+
+.opblock.opblock-post .opblock-summary-method {
+    background: #10b981 !important;
+}
+
+.opblock.opblock-put .opblock-summary-method,
+.opblock.opblock-patch .opblock-summary-method {
+    background: #f59e0b !important;
+}
+
+.opblock.opblock-delete .opblock-summary-method {
+    background: #ef4444 !important;
+}
+
+/* Request/response sections */
+.opblock-section-header {
+    background: #f8fafc !important;
+    box-shadow: none !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+}
+
+/* Model schema */n.model-box {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 4px !important;
+}
+
+/* Code blocks */
+.opblock .opblock-section pre.microlight {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 4px !important;
+}
+
+/* Buttons */
+.btn.execute {
+    background-color: #3b82f6 !important;
+    border: none !important;
+}
+
+.btn.execute:hover {
+    background-color: #2563eb !important;
+}
+
+/* Tabs */
+.tab-item.active h4 span:after {
+    background: #3b82f6 !important;
+}
+
+/* Input fields */
+.parameters-col_description input[type="text"],
+.parameters-col_description select,
+.parameters-col_description textarea {
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 4px !important;
+    padding: 6px 10px !important;
+}
+
+/* Response codes */
+.response-col_status {
+    font-weight: 600 !important;
+}
+
+/* Model property names */
+.property-name {
+    color: #1e40af !important;
+}
+
+/* Required fields */
+.required {
+    color: #dc2626 !important;
+}
+
+/* Loading animation */
+.loading-container .loading:after {
+    border-color: #3b82f6 transparent transparent !important;
+}
+
+/* Error messages */
+.errors-wrapper {
+    background-color: #fef2f2 !important;
+    border: 1px solid #fecaca !important;
+    border-radius: 4px !important;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .swagger-ui {
+        filter: invert(1) hue-rotate(180deg);
+    }
+    
+    .swagger-ui img, 
+    .swagger-ui svg {
+        filter: invert(1) hue-rotate(180deg);
+    }
+}
