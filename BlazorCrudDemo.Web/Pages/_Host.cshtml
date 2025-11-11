@@ -2,7 +2,19 @@
 @namespace BlazorCrudDemo.Web.Pages
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 @using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
 @{
+    // Get the nonce from the context items set by SecurityHeadersMiddleware first
+    var httpContext = HttpContextAccessor.HttpContext;
+    var nonce = httpContext?.Items["CspNonce"]?.ToString() ?? 
+               httpContext?.Response.Headers["CSP-Nonce"].FirstOrDefault() ??
+               Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16));
+    
+    // Store nonce in ViewData for layout access
+    ViewData["CspNonce"] = nonce;
+    
+    // Set the layout after we've set ViewData
     Layout = "_Layout";
 }
 
@@ -29,21 +41,21 @@
 <!-- Blazor Error Handling Styles -->
 <link href="~/css/blazor-error-handling.css" rel="stylesheet" />
 
-<!-- Blazor Server Script -->
-<script src="_framework/blazor.server.js" autostart="false"></script>
+<!-- Blazor Server Script (includes SignalR client) -->
+<script src="_framework/blazor.server.js" autostart="false" nonce="@nonce"></script>
 
-<!-- SignalR -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js" 
-        integrity="sha512-7rhBJh1om/W5Ztx7WiYOR9h2wlSaTmPyQMoHFtbT/FVNIA12y6S6I8HY9mrBS1uJ3dSU/R3qaSAXsGYuRjMDxg==" 
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- Add a global variable to store the nonce for dynamic script loading -->
+<script nonce="@nonce">
+    window.__nonce__ = '@nonce';
+</script>
 
 
-<!-- Custom Scripts -->
-<script src="~/js/site.js" asp-append-version="true"></script>
-<script src="~/js/dashboard-charts.js" asp-append-version="true" defer></script>
-<script src="~/js/layout.js" asp-append-version="true" defer></script>
-<script src="~/js/error-tracking.js" asp-append-version="true" defer></script>
-<script src="~/js/modal-helper.js" asp-append-version="true" defer></script>
+<!-- Custom Scripts with nonce -->
+<script src="~/js/site.js" asp-append-version="true" nonce="@nonce" defer></script>
+<script src="~/js/dashboard-charts.js" asp-append-version="true" nonce="@nonce" defer></script>
+<script src="~/js/layout.js" asp-append-version="true" nonce="@nonce" defer></script>
+<script src="~/js/error-tracking.js" asp-append-version="true" nonce="@nonce" defer></script>
+<script src="~/js/modal-helper.js" asp-append-version="true" nonce="@nonce" defer></script>
 
 <div id="components-reconnect-modal" class="my-reconnect-modal components-reconnect-hide">
     <div class="show">
@@ -127,68 +139,102 @@
     }
 </style>
 
-<script>
+<script src="_framework/blazor.server.js" autostart="false"></script>
+<script nonce="@nonce">
     // Initialize Blazor when the page is fully loaded
-    document.addEventListener('DOMContentLoaded', function() {
-        // Set up connection state change handlers
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/_blazor")
-            .withAutomaticReconnect({
-                nextRetryDelayInMilliseconds: retryContext => {
-                    // First 10 retries: 1 second
-                    if (retryContext.elapsedMilliseconds < 10000) return 1000;
-                    
-                    // Next 5 retries: 5 seconds
-                    if (retryContext.elapsedMilliseconds < 35000) return 5000;
-                    
-                    // After that: 10 seconds
-                    return 10000;
-                }
-            })
-            .configureLogging(signalR.LogLevel.Warning)
-            .build();
-            
-        // Start the connection
-        startConnection();
-        
-        async function startConnection() {
-            try {
-                await connection.start();
-                console.log('SignalR Connected.');
-            } catch (err) {
-                console.error('SignalR Connection Error: ', err);
-                // Try again in 5 seconds
-                setTimeout(startConnection, 5000);
-            }
+    // Function to configure and start Blazor
+    function initializeBlazor() {
+        // Only initialize if not already initialized
+        if (window.blazorInitialized) {
+            console.log('Blazor already initialized, skipping reinitialization');
+            return;
         }
+
+        console.log('Initializing Blazor...');
         
-        // Handle connection state changes
-        connection.onreconnecting(error => {
-            console.warn('SignalR reconnecting...', error);
+        Blazor.start({
+            reconnectionOptions: {
+                maxRetries: 10,
+                retryIntervalMilliseconds: 2000,
+                maxRetryDelay: 10000,
+                retrySteps: 5
+            },
+            configureSignalR: function (builder) {
+                console.log('Configuring SignalR connection...');
+                
+                // Configure the Blazor SignalR connection
+                const connection = builder.withUrl('/_blazor', {
+                    skipNegotiation: true,
+                    transport: signalR.HttpTransportType.WebSockets
+                }).withAutomaticReconnect({
+                    nextRetryDelayInMilliseconds: function(retryContext) {
+                        const retryDelays = [0, 2000, 5000, 10000];
+                        const delay = retryDelays[Math.min(retryContext.previousRetryCount, retryDelays.length - 1)] || 10000;
+                        console.log(`Connection lost. Attempting to reconnect in ${delay}ms... (Attempt ${retryContext.previousRetryCount + 1})`);
+                        return delay;
+                    }
+                });
+                
+                // Add connection status logging
+                connection.onreconnecting(error => {
+                    console.log('SignalR connection lost, attempting to reconnect...', error);
+                    document.body.classList.add('blazor-reconnecting');
+                });
+                
+                connection.onreconnected(connectionId => {
+                    console.log('SignalR connection reestablished.');
+                    document.body.classList.remove('blazor-reconnecting');
+                });
+                
+                connection.onclose(error => {
+                    console.log('SignalR connection closed.', error);
+                    document.body.classList.remove('blazor-reconnecting');
+                });
+                
+                return connection;
+            }
+        }).then(() => {
+            console.log('Blazor started with SignalR');
+            
+            // Set up global error handlers
+            setupGlobalErrorHandlers();
+            
+            // Set global flag to prevent double initialization
+            window.blazorInitialized = true;
+            
+            // Clean up any error states
+            document.body.classList.remove('blazor-error', 'reconnecting');
+            console.log('Blazor initialization completed');
+            
+            // Initialize notification hub after a short delay to ensure Blazor is fully initialized
+            setTimeout(initializeNotificationHub, 1000);
+            
+        }).catch(error => {
+            console.error('Failed to start Blazor:', error);
+            handleFatalError(error);
+            console.error('Error starting Blazor:', error);
+        });
+        
+        // Handle Blazor reconnection UI
+        document.addEventListener('onreconnecting', () => {
+            console.log('Blazor reconnecting...');
             document.body.classList.add('components-reconnect-show');
         });
         
-        connection.onreconnected(connectionId => {
-            console.log('SignalR reconnected with ID:', connectionId);
+        document.addEventListener('onreconnected', (connectionId) => {
+            console.log('Blazor reconnected with ID:', connectionId);
             document.body.classList.remove('components-reconnect-show');
+            document.body.classList.remove('components-reconnect-failed');
         });
         
-        connection.onclose(error => {
-            console.error('SignalR connection closed:', error);
+        // Handle Blazor connection closed
+        document.addEventListener('onclose', (error) => {
+            console.error('Blazor connection closed:', error);
             document.body.classList.add('components-reconnect-failed');
         });
-        // Check if Blazor is already initialized
-        if (window.blazorInitialized) {
-            console.log('Blazor already initialized, skipping...');
-            return;
-        }
         
+        // Mark Blazor as initialized
         window.blazorInitialized = true;
-        
-        // Configure Blazor with authentication support
-        Blazor.start({
-            configureSignalR: function (builder) {
-                // Ensure the SignalR connection includes credentials
                 builder.withUrl("/_blazor", { 
                     accessTokenFactory: () => {
                         return document.cookie
@@ -262,55 +308,16 @@
             return;
         }
 
-        // Configure and start Blazor
-        try {
-            // Initialize Blazor with error handling
-            Blazor.start({
-                configureSignalR: function (builder) {
-                    return new signalR.HubConnectionBuilder()
-                        .withUrl("/_blazor")
-                        .withAutomaticReconnect({
-                            nextRetryDelayInMilliseconds: retryContext => {
-                                // Exponential backoff with jitter
-                                const baseDelay = 1000; // Start with 1 second
-                                const maxDelay = 30000; // Max 30 seconds
-                                const delay = Math.min(
-                                    maxDelay,
-                                    baseDelay * Math.pow(2, retryContext.previousRetryCount) + 
-                                    (Math.random() * 1000) // Add jitter
-                                );
-                                
-                                console.log(`Attempting to reconnect in ${Math.round(delay/1000)} seconds...`);
-                                return delay;
-                            }
-                        })
-                        .configureLogging(signalR.LogLevel.Warning)
-                        .build();
-                }
-            }).then(() => {
-                console.log('Blazor started successfully');
-
-                // Set global flag to prevent double initialization
-                window._blazorInitialized = true;
-
-                // Clean up any error states
-                document.body.classList.remove('blazor-error', 'reconnecting');
-                
-                // Set up global error handlers and reconnection handlers
-                setupGlobalErrorHandlers();
-                setupReconnectionHandlers();
-                
-            }).catch(error => {
-                console.error('Failed to start Blazor:', error);
-                handleFatalError(error);
-            });
-            
-        } catch (error) {
-            if (!error.message || !error.message.includes('Blazor has already started')) {
-                console.error('Error initializing Blazor:', error);
-                handleFatalError(error);
-            }
-        }
+        // Set up global error handlers
+        setupGlobalErrorHandlers();
+        setupReconnectionHandlers();
+        
+        // Set global flag to prevent double initialization
+        window._blazorInitialized = true;
+        
+        // Clean up any error states
+        document.body.classList.remove('blazor-error', 'reconnecting');
+        console.log('Blazor initialization completed');
     });
     
     // Set up global error handlers
