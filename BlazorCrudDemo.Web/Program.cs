@@ -81,6 +81,58 @@ builder.Services.AddSignalR(options =>
 // Add services to the container.
 builder.Services.AddRazorPages();
 
+// Add health checks
+builder.Services.AddHealthChecks()
+    .AddSqlite(
+        connectionString: builder.Configuration.GetConnectionString("DefaultConnection"),
+        healthQuery: "SELECT 1;",
+        name: "database",
+        failureStatus: Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy,
+        tags: new[] { "db", "sqlite", "ready" })
+    .AddDiskStorageHealthCheck(settings =>
+    {
+        settings.AddDrive("/", 500); // 500MB minimum free disk space
+    }, name: "disk", tags: new[] { "storage", "ready" })
+    .AddMemoryHealthCheck(1024 * 1024 * 100); // 100MB threshold
+
+// Add Swagger/OpenAPI
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new() { Title = "BlazorCrudDemo API", Version = "v1" });
+    
+    // Add JWT Authentication to Swagger
+    options.AddSecurityDefinition("Bearer", new()
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "JWT Authorization header using the Bearer scheme.\r\n\r\nEnter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer 12345abcdef\""
+    });
+    
+    options.AddSecurityRequirement(new()
+    {
+        {
+            new()
+            {
+                Reference = new()
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+    
+    // Include XML comments for API documentation
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    options.IncludeXmlComments(xmlPath);
+});
+
 // Configure Blazor Server with detailed logging
 builder.Services.AddServerSideBlazor(options =>
 {
@@ -483,6 +535,22 @@ builder.Services.AddBlazoredLocalStorage();
 
 var app = builder.Build();
 
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "BlazorCrudDemo API V1");
+        options.RoutePrefix = "api";
+        options.DocumentTitle = "BlazorCrudDemo API Documentation";
+        options.EnableTryItOutByDefault();
+        
+        // Add custom CSS for better UI
+        options.InjectStylesheet("/css/swagger.css");
+    });
+}
+
 // Configure the HTTP request pipeline
 if (!app.Environment.IsDevelopment())
 {
@@ -587,6 +655,40 @@ app.UseRateLimiter();
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
 app.UseStaticFiles();
+
+// Add health check endpoints
+app.MapHealthChecks("/health", new()
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                data = e.Value.Data,
+                duration = e.Value.Duration
+            }),
+            totalDuration = report.TotalDuration
+        });
+        await context.Response.WriteAsync(result);
+    }
+});
+
+app.MapHealthChecks("/health/ready", new()
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
+
+app.MapHealthChecks("/health/live", new()
+{
+    Predicate = _ => false
+});
+
 app.UseRouting();
 
 // Configure IdentityServer middleware
