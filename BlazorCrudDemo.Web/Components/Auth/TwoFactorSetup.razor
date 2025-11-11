@@ -1,0 +1,213 @@
+@using BlazorCrudDemo.Web.Services
+@using Microsoft.JSInterop
+@inject TwoFactorService TwoFactorService
+@inject NavigationManager NavigationManager
+@inject ILogger<TwoFactorSetup> Logger
+@inject IJSRuntime JSRuntime
+
+<div class="card">
+    <div class="card-header">
+        <h3>Two-Factor Authentication Setup</h3>
+    </div>
+    <div class="card-body">
+        @if (!is2FASetupCompleted)
+        {
+            @if (setupResult?.Success == true)
+            {
+                <div class="alert alert-info">
+                    <h5>Step 1: Configure Authenticator App</h5>
+                    <p>Scan the QR code below with your authenticator app or enter the following key:</p>
+                    <div class="text-center mb-3">
+                        <img src="@($"data:image/png;base64,{qrCodeImage}")" alt="QR Code" class="img-fluid" style="max-width: 200px;" />
+                    </div>
+                    <div class="form-group">
+                        <label>Manual Entry Key:</label>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" value="@setupResult.FormattedKey" id="manualKey" readonly />
+                            <button class="btn btn-outline-secondary" type="button" @onclick="CopyToClipboard">
+                                <i class="bi bi-clipboard"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+
+                    <h5 class="mt-4">Step 2: Verify Code</h5>
+                    <p>Enter the verification code from your authenticator app:</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <input type="text" class="form-control form-control-lg text-center" @bind="verificationCode" placeholder="6-digit code" maxlength="6" />
+                                <ValidationMessage For="@(() => verificationCode)" />
+                            </div>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-center">
+                            <button class="btn btn-primary" @onclick="VerifyCode" :disabled="isVerifying">
+                                @if (isVerifying)
+                                {
+                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    <span>Verifying...</span>
+                                }
+                                else
+                                {
+                                    <span>Verify & Enable</span>
+                                }
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning">
+                    <p>Two-factor authentication (2FA) adds an extra layer of security to your account.</p>
+                    <button class="btn btn-primary" @onclick="Setup2FA">
+                        <i class="bi bi-shield-lock"></i> Set up 2FA
+                    </button>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="alert alert-success">
+                <h5><i class="bi bi-shield-check text-success"></i> Two-Factor Authentication is Enabled</h5>
+                <p>Your account is now protected with two-factor authentication.</p>
+                <button class="btn btn-outline-danger" @onclick="Disable2FA">
+                    <i class="bi bi-shield-x"></i> Disable 2FA
+                </button>
+            </div>
+        }
+        
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger mt-3">@errorMessage</div>
+        }
+        
+        @if (showSuccessMessage)
+        {
+            <div class="alert alert-success mt-3">
+                @successMessage
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Email { get; set; } = string.Empty;
+    
+    private Setup2FAResult? setupResult;
+    private string verificationCode = string.Empty;
+    private bool isVerifying = false;
+    private string errorMessage = string.Empty;
+    private bool showSuccessMessage = false;
+    private string successMessage = string.Empty;
+    private bool is2FASetupCompleted = false;
+    private string qrCodeImage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        is2FASetupCompleted = await TwoFactorService.IsTwoFactorEnabled(Email);
+    }
+
+    private async Task Setup2FA()
+    {
+        try
+        {
+            setupResult = await TwoFactorService.GenerateTwoFactorSetup(Email);
+            if (setupResult.Success && !string.IsNullOrEmpty(setupResult.AuthenticatorUri))
+            {
+                qrCodeImage = TwoFactorService.GenerateQrCode(Email, setupResult.AuthenticatorUri);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An error occurred while setting up 2FA. Please try again.";
+            Logger.LogError(ex, "Error setting up 2FA for user {Email}", Email);
+        }
+    }
+
+    private async Task VerifyCode()
+    {
+        if (string.IsNullOrWhiteSpace(verificationCode) || verificationCode.Length != 6)
+        {
+            errorMessage = "Please enter a valid 6-digit code.";
+            return;
+        }
+
+        isVerifying = true;
+        errorMessage = string.Empty;
+        
+        try
+        {
+            var isValid = await TwoFactorService.VerifyTwoFactorCode(Email, verificationCode);
+            if (isValid)
+            {
+                is2FASetupCompleted = true;
+                showSuccessMessage = true;
+                successMessage = "Two-factor authentication has been successfully enabled for your account.";
+                
+                // Show success message for 5 seconds
+                await Task.Delay(5000);
+                NavigationManager.NavigateTo("/account/security", true);
+            }
+            else
+            {
+                errorMessage = "Invalid verification code. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An error occurred while verifying the code. Please try again.";
+            Logger.LogError(ex, "Error verifying 2FA code for user {Email}", Email);
+        }
+        finally
+        {
+            isVerifying = false;
+        }
+    }
+
+    private async Task Disable2FA()
+    {
+        try
+        {
+            var result = await TwoFactorService.DisableTwoFactor(Email);
+            if (result)
+            {
+                is2FASetupCompleted = false;
+                setupResult = null;
+                showSuccessMessage = true;
+                successMessage = "Two-factor authentication has been disabled for your account.";
+                
+                // Show success message for 3 seconds
+                await Task.Delay(3000);
+                StateHasChanged();
+            }
+            else
+            {
+                errorMessage = "Failed to disable two-factor authentication. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An error occurred while disabling 2FA. Please try again.";
+            Logger.LogError(ex, "Error disabling 2FA for user {Email}", Email);
+        }
+    }
+
+    private async Task CopyToClipboard()
+    {
+        if (setupResult != null && !string.IsNullOrEmpty(setupResult.FormattedKey))
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", setupResult.FormattedKey.Replace(" ", ""));
+            
+            // Show temporary success message
+            var currentMessage = successMessage;
+            successMessage = "Key copied to clipboard!";
+            showSuccessMessage = true;
+            StateHasChanged();
+            
+            await Task.Delay(2000);
+            showSuccessMessage = false;
+            successMessage = currentMessage;
+            StateHasChanged();
+        }
+    }
+}
