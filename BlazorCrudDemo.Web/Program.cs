@@ -1,5 +1,8 @@
 using BlazorCrudDemo.Web.Middleware;
 using Blazored.LocalStorage;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using System.Threading.RateLimiting;
 
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
@@ -25,6 +28,7 @@ using Blazored.Toast;
 using Blazored.Modal;
 using AutoMapper;
 using BlazorCrudDemo.Shared.DTOs;
+using Microsoft.AspNetCore.Http.Connections;
 using FluentValidation;
 using System.Reflection;
 using Serilog;
@@ -51,37 +55,109 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog((context, loggerConfiguration) =>
     loggerConfiguration.ReadFrom.Configuration(context.Configuration));
 
-// Add services to the container
+// Add CORS policy for WebSockets
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigins",
+        builder =>
+        {
+            builder.WithOrigins("http://localhost:5120", "https://localhost:5120")
+                   .AllowAnyHeader()
+                   .AllowAnyMethod()
+                   .AllowCredentials(); // This is important for WebSockets
+        });
+});
+
+// Add SignalR services with enhanced configuration
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+    options.KeepAliveInterval = TimeSpan.FromMinutes(1);
+    options.ClientTimeoutInterval = TimeSpan.FromMinutes(5);
+    options.HandshakeTimeout = TimeSpan.FromSeconds(30);
+    options.MaximumReceiveMessageSize = 32 * 1024; // 32KB
+});
+
+// Add services to the container.
 builder.Services.AddRazorPages();
-builder.Services.AddServerSideBlazor();
+
+// Configure Blazor Server with detailed logging
+builder.Services.AddServerSideBlazor(options =>
+{
+    options.DetailedErrors = builder.Environment.IsDevelopment();
+    options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromMinutes(5);
+    options.DisconnectedCircuitMaxRetained = 100;
+    options.JSInteropDefaultCallTimeout = TimeSpan.FromMinutes(1);
+    options.MaxBufferedUnacknowledgedRenderBatches = 10;
+});
+
+// Add HTTP context accessor
+builder.Services.AddHttpContextAccessor();
+
+// Add nonce script tag helper
+builder.Services.AddScoped<NonceScriptTagHelper>();
+
+// Configure JSON serialization for SignalR
+builder.Services.Configure<JsonHubProtocolOptions>(options =>
+{
+    options.PayloadSerializerOptions.PropertyNamingPolicy = null; // Use exact property names
+});
+
+// Add controllers
 builder.Services.AddControllers();
+
+// Add rate limiting
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.User.Identity?.Name ?? httpContext.Request.Headers.Host.ToString(),
+            factory: partition => new FixedWindowRateLimiterOptions
+            {
+                AutoReplenishment = true,
+                PermitLimit = 100,
+                Window = TimeSpan.FromMinutes(1)
+            }));
+});
+
+// Add 2FA service
+builder.Services.AddScoped<TwoFactorService>();
 
 // Add cascading authentication state for Blazor Server
 builder.Services.AddCascadingAuthenticationState();
 
-// Configure Identity
+// Configure Identity with enhanced security settings
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
+    // Enhanced password requirements
     options.Password.RequireDigit = true;
     options.Password.RequireLowercase = true;
     options.Password.RequireUppercase = true;
     options.Password.RequireNonAlphanumeric = true;
-    options.Password.RequiredLength = 8;
+    options.Password.RequiredLength = 12;
+    options.Password.RequiredUniqueChars = 5;
 
+    // User settings
     options.User.RequireUniqueEmail = true;
-    options.SignIn.RequireConfirmedEmail = false; // Set to true in production
+    options.SignIn.RequireConfirmedEmail = true; // Require email confirmation
+    options.SignIn.RequireConfirmedAccount = true;
 
-    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(30);
+    // Account lockout settings
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.AllowedForNewUsers = true;
 
+    // Token providers
     options.Tokens.PasswordResetTokenProvider = TokenOptions.DefaultProvider;
-    options.Tokens.EmailConfirmationTokenProvider = TokenOptions.DefaultProvider;
+    options.Tokens.EmailConfirmationTokenProvider = TokenOptions.DefaultEmailProvider;
+    
+    // Session settings
+    options.SignIn.RequireConfirmedAccount = true;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-// Configure cookie authentication for web UI
+// Configure cookie settings
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.Name = ".AspNetCore.Identity.Application";
@@ -96,52 +172,35 @@ builder.Services.ConfigureApplicationCookie(options =>
         ? CookieSecurePolicy.SameAsRequest 
         : CookieSecurePolicy.Always;
     options.Cookie.SameSite = SameSiteMode.Lax;
+    
     options.Events = new CookieAuthenticationEvents
     {
         OnRedirectToLogin = context =>
         {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            if (context.Request.Path.StartsWithSegments("/api") ||
+                (context.Request.Headers.ContainsKey("X-Requested-With") && 
+                 context.Request.Headers["X-Requested-With"] == "XMLHttpRequest"))
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            }
+            context.Response.Redirect(context.RedirectUri);
             return Task.CompletedTask;
         },
         OnRedirectToAccessDenied = context =>
         {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            return Task.CompletedTask;
-        },
-        OnValidatePrincipal = SecurityStampValidator.ValidatePrincipalAsync
-    };
-});
-
-// Configure authentication to use cookies for Blazor Server
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
-    {
-        options.Cookie.Name = ".AspNetCore.Identity.Application";
-        options.LoginPath = "/auth/login";
-        options.LogoutPath = "/auth/logout";
-        options.AccessDeniedPath = "/auth/access-denied";
-        options.ReturnUrlParameter = "returnUrl";
-        options.ExpireTimeSpan = TimeSpan.FromHours(2);
-        options.SlidingExpiration = true;
-        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
-            ? CookieSecurePolicy.SameAsRequest 
-            : CookieSecurePolicy.Always;
-        options.Cookie.SameSite = SameSiteMode.Lax;
-        options.Events = new CookieAuthenticationEvents
-        {
-            OnRedirectToLogin = context =>
-            {
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                return Task.CompletedTask;
-            },
-            OnRedirectToAccessDenied = context =>
+            if (context.Request.Path.StartsWithSegments("/api") ||
+                (context.Request.Headers.ContainsKey("X-Requested-With") && 
+                 context.Request.Headers["X-Requested-With"] == "XMLHttpRequest"))
             {
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
                 return Task.CompletedTask;
-            },
-            OnValidatePrincipal = SecurityStampValidator.ValidatePrincipalAsync
-        };
-    });
+            }
+            context.Response.Redirect(context.RedirectUri);
+            return Task.CompletedTask;
+        }
+    };
+});
 
 // Register CustomAuthenticationStateProvider as the implementation for AuthenticationStateProvider
 builder.Services.AddScoped<AuthenticationStateProvider>(provider => 
@@ -343,10 +402,25 @@ builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 
 // Register services
 builder.Services.AddScoped<IProductService, ProductService>();
+// Application services
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IStateContainer, StateContainer>();
 builder.Services.AddScoped<IBusinessValidationService, BusinessValidationService>();
+
+// Add HTTP context accessor if not already added
+builder.Services.AddHttpContextAccessor();
+
+// Add session support for storing temporary data
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
+        ? CookieSecurePolicy.SameAsRequest 
+        : CookieSecurePolicy.Always;
+});
 builder.Services.AddScoped<ErrorNotificationService>();
 builder.Services.AddScoped<ErrorRecoveryService>();
 builder.Services.AddScoped<NetworkStatusService>();
@@ -415,14 +489,51 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error");
     app.UseHsts();
 }
+else
+{
+    app.UseDeveloperExceptionPage();
+}
+
+// Configure WebSockets for Blazor Server
+// Enable WebSockets
+app.UseWebSockets(new Microsoft.AspNetCore.Builder.WebSocketOptions
+{
+    KeepAliveInterval = TimeSpan.FromMinutes(2)
+});
+
+// Configure CORS to allow WebSocket connections
+app.UseCors(builder =>
+{
+    builder.WithOrigins("http://localhost:5120", "https://localhost:5120")
+           .AllowAnyHeader()
+           .AllowAnyMethod()
+           .AllowCredentials()
+           .SetIsOriginAllowed(origin => 
+               origin.StartsWith("http://localhost") || 
+               origin.StartsWith("https://localhost"));
+});
+
+// Map the Blazor hub with WebSocket and LongPolling transports
+app.MapBlazorHub(options =>
+{
+    options.Transports = HttpTransportType.WebSockets | 
+                        HttpTransportType.LongPolling;
+});
+
+// Add a redirect from /auth/login to /api/auth/login
+app.MapGet("/auth/login", async context =>
+{
+    context.Response.Redirect("/api/auth/login", permanent: true);
+    await Task.CompletedTask;
+});
+
+// Map the fallback route for client-side routing
+app.MapFallbackToPage("/_Host");
 
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
-
-// Add CORS middleware
-app.UseCors("AllowSpecificOrigins");
 
 // Add security headers middleware
 app.Use(async (context, next) =>
@@ -453,6 +564,25 @@ using (var scope = app.Services.CreateScope())
 // Add request/response logging middleware
 app.UseMiddleware<RequestResponseLoggingMiddleware>();
 
+// Add security headers middleware
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
+// Add nonce to script tags
+app.Use(async (context, next) =>
+{
+    var nonce = context.Items["CspNonce"]?.ToString();
+    if (!string.IsNullOrEmpty(nonce))
+    {
+        context.Response.Headers["Content-Security-Policy"] = context.Response.Headers["Content-Security-Policy"]
+            .ToString()
+            .Replace("{nonce}", nonce);
+    }
+    await next();
+});
+
+// Enable rate limiting
+app.UseRateLimiter();
+
 // Add global exception handler middleware
 app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
@@ -469,7 +599,19 @@ app.UseAuthorization();
 // Map controllers and endpoints
 app.MapControllers();
 app.MapRazorPages();
-app.MapBlazorHub();
+
+// Configure Blazor Hub with enhanced WebSocket settings
+app.MapBlazorHub(options => 
+{
+    options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets | 
+                        Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling;
+    options.CloseOnAuthenticationExpiration = true;
+    options.ApplicationMaxBufferSize = 64 * 1024; // 64KB
+    options.TransportMaxBufferSize = 64 * 1024;   // 64KB
+    options.WebSockets.CloseTimeout = TimeSpan.FromSeconds(30);
+    options.LongPolling.PollTimeout = TimeSpan.FromSeconds(30);
+    options.TransportSendTimeout = TimeSpan.FromSeconds(30);
+});
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapFallbackToPage("/_Host");
 
