@@ -1,45 +1,54 @@
-using BlazorCrudDemo.Web.Middleware;
-using Blazored.LocalStorage;
-using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using System.Threading.RateLimiting;
-
+using System.Reflection;
+using System.Text;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
-
+using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Serilog;
+using Serilog.Events;
+using Serilog.Sinks.SystemConsole.Themes;
+using FluentValidation;
+using AutoMapper;
+using Blazored.LocalStorage;
+using Blazored.Toast;
+using Blazored.Modal;
+using Asp.Versioning;
+using Asp.Versioning.ApiExplorer;
 using BlazorCrudDemo.Data.Contexts;
 using BlazorCrudDemo.Data.Interfaces;
 using BlazorCrudDemo.Data.Repositories;
 using BlazorCrudDemo.Data.Contexts.Interceptors;
 using BlazorCrudDemo.Data.UnitOfWork;
+using BlazorCrudDemo.Data.Models;
+using BlazorCrudDemo.Data.Seeders;
+using BlazorCrudDemo.Shared.DTOs;
+using BlazorCrudDemo.Web.Middleware;
 using BlazorCrudDemo.Web.Services;
 using BlazorCrudDemo.Web.Hubs;
 using BlazorCrudDemo.Web.BackgroundServices;
 using BlazorCrudDemo.Web.Mapping;
 using BlazorCrudDemo.Web.Configuration;
-using BlazorCrudDemo.Data.Models;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.SignalR;
-using Blazored.Toast;
-using Blazored.Modal;
-using AutoMapper;
-using BlazorCrudDemo.Shared.DTOs;
-using Microsoft.AspNetCore.Http.Connections;
-using FluentValidation;
-using System.Reflection;
-using Serilog;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using BlazorCrudDemo.Data.Seeders;
-using Microsoft.AspNetCore.Cors.Infrastructure;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Mvc;
+using BlazorCrudDemo.Web.HealthChecks;
 
+// Create the builder
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure Serilog
@@ -50,12 +59,28 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.WithMachineName()
     .Enrich.WithProcessId()
     .Enrich.WithThreadId()
+    .WriteTo.Console(theme: AnsiConsoleTheme.Code)
     .CreateLogger();
 
-builder.Host.UseSerilog((context, loggerConfiguration) =>
-    loggerConfiguration.ReadFrom.Configuration(context.Configuration));
+try
+{
+    Log.Information("Starting web application");
+    
+    // Add services to the container
+    builder.Host.UseSerilog();
+    
+    // Configure Kestrel
+    builder.WebHost.ConfigureKestrel(serverOptions =>
+    {
+        serverOptions.AddServerHeader = false;
+        serverOptions.ConfigureHttpsDefaults(httpsOptions =>
+        {
+            httpsOptions.SslProtocols = System.Security.Authentication.SslProtocols.Tls12 | 
+                                      System.Security.Authentication.SslProtocols.Tls13;
+        });
+    });
 
-// Add CORS policy for WebSockets
+    // Add CORS policy for WebSockets
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigins",
@@ -78,8 +103,88 @@ builder.Services.AddSignalR(options =>
     options.MaximumReceiveMessageSize = 32 * 1024; // 32KB
 });
 
-// Add services to the container.
+// Add API Versioning
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+    options.ApiVersionReader = new HeaderApiVersionReader("api-version");
+})
+.AddMvc()
+.AddApiExplorer(options =>
+{
+    // Add the versioned API explorer, which also adds IApiVersionDescriptionProvider service
+    // Note: the specified format code will format the version as "v{0}" (e.g., v1, v2)
+    options.GroupNameFormat = "'v'VVV";
+    
+    // Note: this option is only necessary when versioning by URL segment. The SubstitutionFormat
+    // can also be used to control the format of the API version in route templates
+    options.SubstituteApiVersionInUrl = true;
+});
+
+// Add API Explorer for Swagger
+try
+{
+    builder.Services.AddVersionedApiExplorer(options =>
+    {
+        // Add the versioned API explorer, which also adds IApiVersionDescriptionProvider service
+        // Note: the specified format code will format the version as "'v'major[.minor][-status]"
+        options.GroupNameFormat = "'v'VVV";
+        
+        // Note: this option is only necessary when versioning by URL segment. The SubstitutionFormat
+        // can also be used to control the format of the API version in route templates
+        options.SubstituteApiVersionInUrl = true;
+    });
+}
+catch (Exception ex)
+{
+    Log.Error(ex, "Error adding versioned API explorer");
+    throw;
+}
+
+// Add Health Checks
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>("database")
+    .AddDbContextCheck<ApplicationDbContext>("database-context");
+
+// Add Razor Pages and Server-Side Blazor
 builder.Services.AddRazorPages();
+builder.Services.AddServerSideBlazor(options =>
+{
+    options.DetailedErrors = builder.Environment.IsDevelopment();
+    options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromMinutes(5);
+    options.DisconnectedCircuitMaxRetained = 100;
+    options.JSInteropDefaultCallTimeout = TimeSpan.FromMinutes(1);
+    options.MaxBufferedUnacknowledgedRenderBatches = 10;
+});
+
+// Add Response Caching
+builder.Services.AddResponseCaching(options =>
+{
+    options.SizeLimit = 100 * 1024 * 1024; // 100 MB
+    options.MaximumBodySize = 64 * 1024 * 1024; // 64 MB
+    options.UseCaseSensitivePaths = false;
+});
+
+// Add Response Compression
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+});
+
+// Configure Compression
+builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+{
+    options.Level = System.IO.Compression.CompressionLevel.Optimal;
+});
+
+builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+{
+    options.Level = System.IO.Compression.CompressionLevel.Optimal;
+});
 
 // Add health checks
 builder.Services.AddHealthChecks()
@@ -570,16 +675,7 @@ app.UseWebSockets(new Microsoft.AspNetCore.Builder.WebSocketOptions
 });
 
 // Configure CORS to allow WebSocket connections
-app.UseCors(builder =>
-{
-    builder.WithOrigins("http://localhost:5120", "https://localhost:5120")
-           .AllowAnyHeader()
-           .AllowAnyMethod()
-           .AllowCredentials()
-           .SetIsOriginAllowed(origin => 
-               origin.StartsWith("http://localhost") || 
-               origin.StartsWith("https://localhost"));
-});
+app.UseCors("AllowSpecificOrigins");
 
 // Map the Blazor hub with WebSocket and LongPolling transports
 app.MapBlazorHub(options =>
@@ -718,28 +814,40 @@ app.MapHub<NotificationHub>("/notificationHub");
 app.MapFallbackToPage("/_Host");
 
 // Ensure database is migrated and created
-using (var scope = app.Services.CreateScope())
+try
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-
-    try
+    using (var scope = app.Services.CreateScope())
     {
-        // Apply any pending migrations
-        logger.LogInformation("Applying database migrations...");
-        dbContext.Database.Migrate();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-        // Seed sample data if the database is empty
-        logger.LogInformation("Seeding sample data...");
-        await SampleDataSeeder.SeedAsync(scope.ServiceProvider);
-        
-        logger.LogInformation("Database initialization completed successfully.");
+        try
+        {
+            // Apply any pending migrations
+            logger.LogInformation("Applying database migrations...");
+            dbContext.Database.Migrate();
+
+            // Seed sample data if the database is empty
+            logger.LogInformation("Seeding sample data...");
+            await SampleDataSeeder.SeedAsync(scope.ServiceProvider);
+            
+            logger.LogInformation("Database initialization completed successfully.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "An error occurred while initializing the database.");
+            throw;
+        }
     }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "An error occurred while initializing the database.");
-        throw;
-    }
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+    throw;
+}
+finally
+{
+    Log.CloseAndFlush();
 }
 
 app.Run();
