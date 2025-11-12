@@ -1,0 +1,78 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Microsoft -->
+    <PackageVersion Include="Microsoft.AspNetCore" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authorization" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.0" />
+    <!-- SignalR packages are included with the .NET 8.0 SDK -->
+    
+    <!-- Entity Framework Core -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageVersion>
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageVersion>
+    
+    <!-- Blazor -->
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.0" />
+    
+    <!-- Authentication & Authorization -->
+    <PackageVersion Include="Duende.IdentityServer" Version="7.3.0" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="7.1.2" />
+    
+    <!-- UI Components -->
+    <PackageVersion Include="BlazorAnimate" Version="3.0.0" />
+    <PackageVersion Include="Blazored.Modal" Version="7.1.0" />
+    <PackageVersion Include="Blazored.Toast" Version="4.1.0" />
+    <PackageVersion Include="Blazored.LocalStorage" Version="4.3.0" />
+    <!-- Temporarily removing Syncfusion.Blazor as it's causing timeouts -->
+    
+    <!-- Data Processing -->
+    <PackageVersion Include="CsvHelper" Version="30.0.1" />
+    <PackageVersion Include="ClosedXML" Version="0.102.1" />
+    
+    <!-- Security -->
+    <PackageVersion Include="Otp.NET" Version="1.4.0" />
+    <PackageVersion Include="QRCoder" Version="1.4.3" />
+    
+    <!-- Logging -->
+    <PackageVersion Include="Serilog" Version="3.1.1" />
+    <PackageVersion Include="Serilog.AspNetCore" Version="7.0.0" />
+    <PackageVersion Include="Serilog.Sinks.Console" Version="5.0.0" />
+    <PackageVersion Include="Serilog.Sinks.File" Version="5.0.0" />
+    <PackageVersion Include="Serilog.Enrichers.Environment" Version="2.2.0" />
+    <PackageVersion Include="Serilog.Enrichers.Process" Version="2.0.2" />
+    <PackageVersion Include="Serilog.Enrichers.Thread" Version="3.1.0" />
+    
+    <!-- Utilities -->
+    <PackageVersion Include="AutoMapper" Version="12.0.1" />
+    <PackageVersion Include="FluentValidation" Version="11.5.1" />
+    <PackageVersion Include="FluentValidation.AspNetCore" Version="11.3.0" />
+    
+    <!-- Testing -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageVersion Include="xunit" Version="2.4.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.5.1">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageVersion>
+    <PackageVersion Include="coverlet.collector" Version="6.0.0" />
+    <PackageVersion Include="Moq" Version="4.20.70" />
+    <PackageVersion Include="FluentAssertions" Version="6.12.0" />
+  </ItemGroup>
+</Project>
