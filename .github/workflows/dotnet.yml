@@ -1,0 +1,53 @@
+name: .NET
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          SA_PASSWORD: "your_strong_password"
+          ACCEPT_EULA: "Y"
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P your_strong_password -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.x
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build --no-restore --configuration Release
+      
+    - name: Test
+      run: dotnet test --no-build --verbosity normal --configuration Release --collect:"XPlat Code Coverage"
+      
+    - name: Publish
+      run: |
+        dotnet publish BlazorCrudDemo.Web/BlazorCrudDemo.Web.csproj -c Release -o ${{ github.workspace }}/publish
+        
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: web-app
+        path: ${{ github.workspace }}/publish/
+        retention-days: 5
